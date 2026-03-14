@@ -1,0 +1,171 @@
+{
+  "projectType": "frontend",
+  "projectName": "Shadcn Admin",
+  "projectDescription": "A comprehensive admin dashboard UI built with Shadcn UI, Vite, and TanStack Router with advanced features and customization options.",
+  "theme": "mint",
+  "primaryColor": "#040404",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/project-structure",
+              "concepts/routing",
+              "concepts/theming",
+              "concepts/rtl-support"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/sidebar",
+              "features/layouts",
+              "features/data-tables",
+              "features/authentication",
+              "features/global-search",
+              "features/dark-mode"
+            ]
+          },
+          {
+            "group": "Customization",
+            "pages": [
+              "customization/layout-options",
+              "customization/theme-configuration",
+              "customization/adding-pages",
+              "customization/custom-components"
+            ]
+          },
+          {
+            "group": "Pages",
+            "pages": [
+              "pages/dashboard",
+              "pages/tasks",
+              "pages/users",
+              "pages/chats",
+              "pages/apps",
+              "pages/settings",
+              "pages/error-pages"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Components",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "components/overview"
+            ]
+          },
+          {
+            "group": "Layout Components",
+            "pages": [
+              "components/app-sidebar",
+              "components/header",
+              "components/main-layout"
+            ]
+          },
+          {
+            "group": "Custom Components",
+            "pages": [
+              "components/command-menu",
+              "components/config-drawer",
+              "components/data-table",
+              "components/date-picker",
+              "components/password-input",
+              "components/theme-switch"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "components/ui-components"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Development",
+            "pages": [
+              "guides/local-development",
+              "guides/building-production",
+              "guides/deploying"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "guides/clerk-integration",
+              "guides/api-integration",
+              "guides/state-management"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "guides/rtl-implementation",
+              "guides/updating-components",
+              "guides/performance-optimization"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Responsive admin dashboard UI with light/dark mode",
+    "Built-in customizable sidebar with multiple variants",
+    "Advanced data tables with filtering, sorting, and pagination",
+    "Global command/search menu for navigation",
+    "Pre-built authentication pages (sign-in, sign-up, OTP, forgot password)",
+    "RTL (Right-to-Left) language support",
+    "Multiple layout options (default, compact, full)",
+    "30+ customized Shadcn UI components",
+    "Settings pages with profile, account, appearance, and notifications",
+    "Error pages (401, 403, 404, 500, maintenance)",
+    "TanStack Router integration with type-safe routing",
+    "Clerk authentication integration support",
+    "Chart and analytics components with Recharts",
+    "Form validation with React Hook Form and Zod"
+  ],
+  "publicApiSurface": [
+    "AppSidebar - Main sidebar component",
+    "AuthenticatedLayout - Layout wrapper for authenticated pages",
+    "CommandMenu - Global search/command palette",
+    "ConfigDrawer - Layout and theme configuration drawer",
+    "DataTable - Advanced table component with filtering and sorting",
+    "DatePicker - Custom date picker component",
+    "PasswordInput - Password input with visibility toggle",
+    "ThemeSwitch - Theme mode switcher component",
+    "useLayout - Layout configuration hook",
+    "useTheme - Theme management hook",
+    "sidebarData - Navigation structure configuration",
+    "Main layout variants: default, compact, full",
+    "Sidebar variants: sidebar, floating, inset",
+    "Collapsible modes: offcanvas, icon, none",
+    "Profile, Account, Appearance, Notifications, Display settings pages",
+    "Dashboard with analytics and overview components",
+    "Tasks management with data table",
+    "Users management with CRUD operations",
+    "Chats interface with messaging UI",
+    "Apps integration showcase",
+    "Error pages: Unauthorized, Forbidden, NotFound, InternalServerError, Maintenance"
+  ]
+}
