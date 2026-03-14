@@ -1,0 +1,391 @@
+---
+title: Layouts
+description: Flexible layout system with multiple variants and responsive design
+icon: layout-grid
+---
+
+Shadcn Admin provides a comprehensive layout system that combines the sidebar with header and main content areas. The layout is fully responsive and supports multiple visual styles.
+
+## Layout Components
+
+The layout system consists of three main components:
+
+<CardGroup cols={3}>
+  <Card title="AuthenticatedLayout" icon="layout">
+    Root layout wrapper with sidebar
+  </Card>
+  <Card title="Header" icon="columns">
+    Top navigation bar with actions
+  </Card>
+  <Card title="Main" icon="square">
+    Main content container
+  </Card>
+</CardGroup>
+
+## Authenticated Layout
+
+The `AuthenticatedLayout` component wraps your application with sidebar navigation:
+
+```tsx src/components/layout/authenticated-layout.tsx
+import { Outlet } from '@tanstack/react-router'
+import { getCookie } from '@/lib/cookies'
+import { cn } from '@/lib/utils'
+import { LayoutProvider } from '@/context/layout-provider'
+import { SearchProvider } from '@/context/search-provider'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { AppSidebar } from '@/components/layout/app-sidebar'
+import { SkipToMain } from '@/components/skip-to-main'
+
+export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
+  const defaultOpen = getCookie('sidebar_state') !== 'false'
+  return (
+    <SearchProvider>
+      <LayoutProvider>
+        <SidebarProvider defaultOpen={defaultOpen}>
+          <SkipToMain />
+          <AppSidebar />
+          <SidebarInset
+            className={cn(
+              '@container/content',
+              'has-data-[layout=fixed]:h-svh',
+              'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
+            )}
+          >
+            {children ?? <Outlet />}
+          </SidebarInset>
+        </SidebarProvider>
+      </LayoutProvider>
+    </SearchProvider>
+  )
+}
+```
+
+## Layout Providers
+
+The layout system uses multiple context providers:
+
+### SearchProvider
+
+Enables the global command menu (Cmd+K):
+
+```tsx
+<SearchProvider>
+  {/* Your app content */}
+</SearchProvider>
+```
+
+### LayoutProvider
+
+Manages sidebar variant and collapsible mode:
+
+```tsx
+import { useLayout } from '@/context/layout-provider'
+
+function MyComponent() {
+  const { variant, collapsible, setVariant, setCollapsible } = useLayout()
+  
+  return (
+    <div>
+      <button onClick={() => setVariant('floating')}>Floating</button>
+      <button onClick={() => setVariant('inset')}>Inset</button>
+      <button onClick={() => setVariant('sidebar')}>Sidebar</button>
+    </div>
+  )
+}
+```
+
+### SidebarProvider
+
+Controls sidebar open/closed state:
+
+```tsx
+import { useSidebar } from '@/components/ui/sidebar'
+
+function MyComponent() {
+  const { open, setOpen, openMobile, setOpenMobile } = useSidebar()
+  
+  return <button onClick={() => setOpen(!open)}>Toggle</button>
+}
+```
+
+## Header Component
+
+The `Header` component provides a sticky top bar with sidebar trigger:
+
+```tsx src/components/layout/header.tsx
+import { Header } from '@/components/layout/header'
+
+<Header fixed>
+  <h1 className="text-lg font-semibold">Page Title</h1>
+  {/* Additional header actions */}
+</Header>
+```
+
+### Header Features
+
+**Sticky Positioning**
+
+Set `fixed` prop for a sticky header:
+
+```tsx
+<Header fixed>
+  <h1>Dashboard</h1>
+</Header>
+```
+
+**Scroll Shadow**
+
+Automatically adds shadow when scrolling:
+
+```tsx
+// Adds shadow when scrolled > 10px
+// Includes backdrop blur effect
+<Header fixed className="backdrop-blur">
+  {/* Content */}
+</Header>
+```
+
+**Sidebar Trigger**
+
+Built-in sidebar toggle button:
+
+```tsx
+<header className="flex items-center gap-3">
+  <SidebarTrigger variant="outline" />
+  <Separator orientation="vertical" className="h-6" />
+  {children}
+</header>
+```
+
+## Main Component
+
+The `Main` component is the content container with layout options:
+
+```tsx src/components/layout/main.tsx
+import { Main } from '@/components/layout/main'
+
+<Main fixed fluid>
+  {/* Your page content */}
+</Main>
+```
+
+### Main Props
+
+<ParamField path="fixed" type="boolean" default="false">
+  Enable fixed layout with overflow handling
+</ParamField>
+
+<ParamField path="fluid" type="boolean" default="false">
+  Full width content without max-width constraint
+</ParamField>
+
+### Fixed Layout
+
+For pages with scrollable sections (tables, lists):
+
+```tsx
+<Main fixed>
+  <div className="flex flex-col overflow-hidden">
+    <div className="flex-1 overflow-auto">
+      {/* Scrollable content */}
+    </div>
+  </div>
+</Main>
+```
+
+### Fluid Layout
+
+For full-width content:
+
+```tsx
+<Main fluid>
+  {/* Content spans full width */}
+</Main>
+```
+
+### Default Layout
+
+Constrained width for readability:
+
+```tsx
+<Main>
+  {/* Content with max-width: 80rem (1280px) */}
+</Main>
+```
+
+## Complete Page Example
+
+Here's how to structure a complete page:
+
+```tsx
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+
+export function TasksPage() {
+  return (
+    <>
+      <Header fixed>
+        <div className="flex items-center justify-between flex-1">
+          <h1 className="text-lg font-semibold">Tasks</h1>
+          <Button>New Task</Button>
+        </div>
+      </Header>
+      
+      <Main fixed>
+        <div className="flex flex-col gap-4 flex-1 overflow-hidden">
+          <h2>All Tasks</h2>
+          <div className="flex-1 overflow-auto">
+            {/* Task list content */}
+          </div>
+        </div>
+      </Main>
+    </>
+  )
+}
+```
+
+## Sidebar Variants
+
+Change the sidebar appearance dynamically:
+
+### Inset Variant
+
+Sidebar with padding and rounded corners:
+
+```tsx
+import { useLayout } from '@/context/layout-provider'
+
+const { setVariant } = useLayout()
+setVariant('inset')
+```
+
+### Floating Variant
+
+Elevated sidebar that floats over content:
+
+```tsx
+setVariant('floating')
+```
+
+### Sidebar Variant
+
+Standard sidebar layout:
+
+```tsx
+setVariant('sidebar')
+```
+
+## Collapsible Modes
+
+### Icon Mode
+
+Collapse to icons only:
+
+```tsx
+const { setCollapsible } = useLayout()
+setCollapsible('icon')
+```
+
+### Offcanvas Mode
+
+Mobile drawer behavior:
+
+```tsx
+setCollapsible('offcanvas')
+```
+
+### None Mode
+
+Always expanded:
+
+```tsx
+setCollapsible('none')
+```
+
+## Container Queries
+
+The layout uses container queries for responsive design:
+
+```tsx
+// SidebarInset has @container/content
+<div className="@container/content">
+  {/* Use container query classes */}
+  <div className="@lg/content:grid-cols-2 @2xl/content:grid-cols-3">
+    {/* Responsive grid */}
+  </div>
+</div>
+```
+
+## Responsive Behavior
+
+<Steps>
+  <Step title="Mobile (< 768px)">
+    Sidebar becomes offcanvas drawer, header is compact
+  </Step>
+  <Step title="Tablet (768px - 1024px)">
+    Sidebar can collapse to icons, header shows all actions
+  </Step>
+  <Step title="Desktop (> 1024px)">
+    Full sidebar, header with spacing, main content centered
+  </Step>
+</Steps>
+
+## Accessibility Features
+
+**Skip to Main**
+
+Provides skip link for keyboard navigation:
+
+```tsx
+<SkipToMain />
+```
+
+**Keyboard Navigation**
+
+- `Tab` - Navigate through interactive elements
+- `Enter` - Activate buttons and links
+- `Escape` - Close sidebar on mobile
+
+**ARIA Labels**
+
+All interactive elements include proper labels:
+
+```tsx
+<SidebarTrigger aria-label="Toggle sidebar" />
+```
+
+## Persistent State
+
+Layout preferences are saved to cookies:
+
+```tsx
+// Sidebar open/closed state
+getCookie('sidebar_state')
+
+// Variant preference
+getCookie('layout_variant')
+
+// Collapsible mode
+getCookie('layout_collapsible')
+```
+
+<Note>
+  Cookie preferences persist for 7 days and sync across browser tabs.
+</Note>
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Fixed for Data-Heavy Pages">
+    Enable `fixed` layout for pages with tables or long lists
+  </Step>
+  <Step title="Constrain Content Width">
+    Use default (non-fluid) layout for readable text content
+  </Step>
+  <Step title="Test Mobile Behavior">
+    Verify sidebar and header work well on small screens
+  </Step>
+  <Step title="Provide Header Actions">
+    Place primary page actions in the header for easy access
+  </Step>
+</Steps>

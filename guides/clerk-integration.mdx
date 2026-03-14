@@ -1,0 +1,439 @@
+---
+title: Clerk Integration
+description: Integrate Clerk authentication into your Shadcn Admin application
+---
+
+## Overview
+
+Shadcn Admin includes optional Clerk integration for modern authentication and user management. The integration is isolated in the `/clerk` route, making it easy to adopt or remove based on your needs.
+
+<Note>
+  Clerk integration is completely optional. The application includes a custom auth implementation using Zustand that works independently. You can use either approach or replace both with your preferred auth solution.
+</Note>
+
+## Getting Started
+
+### Prerequisites
+
+- A [Clerk account](https://go.clerk.com/GttUAaK)
+- Clerk Publishable Key from your dashboard
+
+### Installation
+
+Clerk React SDK is already installed as a dependency:
+
+```json package.json
+{
+  "dependencies": {
+    "@clerk/clerk-react": "^5.58.1"
+  }
+}
+```
+
+## Configuration
+
+<Steps>
+  <Step title="Get Your Publishable Key">
+    1. Sign in to your [Clerk Dashboard](https://go.clerk.com/GttUAaK)
+    2. Navigate to the API Keys page
+    3. Copy your Publishable Key from the Quick Copy section
+  </Step>
+
+  <Step title="Create Environment File">
+    Rename `.env.example` to `.env` and add your key:
+
+    ```bash .env
+    VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxx
+    ```
+
+    <Warning>
+      Remember to prefix environment variables with `VITE_` so they're accessible in your Vite application.
+    </Warning>
+  </Step>
+
+  <Step title="Restart Development Server">
+    ```bash
+    pnpm run dev
+    ```
+
+    Navigate to `/clerk/sign-in` to see the Clerk authentication pages.
+  </Step>
+</Steps>
+
+## Implementation Details
+
+### ClerkProvider Setup
+
+The Clerk integration is scoped to the `/clerk` route using a layout component:
+
+```tsx src/routes/clerk/route.tsx
+import { ClerkProvider } from '@clerk/clerk-react'
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+function RouteComponent() {
+  if (!PUBLISHABLE_KEY) {
+    return <MissingClerkPubKey />
+  }
+
+  return (
+    <ClerkProvider
+      publishableKey={PUBLISHABLE_KEY}
+      afterSignOutUrl='/clerk/sign-in'
+      signInUrl='/clerk/sign-in'
+      signUpUrl='/clerk/sign-up'
+      signInFallbackRedirectUrl='/clerk/user-management'
+      signUpFallbackRedirectUrl='/clerk/user-management'
+    >
+      <Outlet />
+    </ClerkProvider>
+  )
+}
+```
+
+**Configuration Options:**
+
+- `afterSignOutUrl`: Where to redirect after sign out
+- `signInUrl`: Custom sign-in page route
+- `signUpUrl`: Custom sign-up page route  
+- `signInFallbackRedirectUrl`: Default redirect after sign in
+- `signUpFallbackRedirectUrl`: Default redirect after sign up
+
+### Protected Routes
+
+Protect routes that require authentication using a layout route:
+
+```tsx src/routes/clerk/_authenticated/route.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+
+export const Route = createFileRoute('/clerk/_authenticated')({
+  component: AuthenticatedLayout,
+})
+```
+
+Any routes under `/clerk/_authenticated/` will require the user to be signed in. For example:
+
+- `/clerk/_authenticated/user-management.tsx` - User management page
+
+### Authentication UI
+
+Clerk provides pre-built components for authentication flows. The implementation uses custom sign-in and sign-up pages that integrate with your design system:
+
+```tsx src/routes/clerk/(auth)/sign-in.tsx
+import { SignIn } from '@clerk/clerk-react'
+
+export const Route = createFileRoute('/clerk/(auth)/sign-in')({
+  component: SignInPage,
+})
+
+function SignInPage() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <SignIn routing="path" path="/clerk/sign-in" />
+    </div>
+  )
+}
+```
+
+## Using Clerk Hooks
+
+Clerk provides React hooks for accessing user data and authentication state:
+
+### useUser Hook
+
+Access the current user's information:
+
+```tsx
+import { useUser } from '@clerk/clerk-react'
+
+function UserProfile() {
+  const { isLoaded, isSignedIn, user } = useUser()
+
+  if (!isLoaded) {
+    return <div>Loading...</div>
+  }
+
+  if (!isSignedIn) {
+    return <div>Please sign in</div>
+  }
+
+  return (
+    <div>
+      <h1>Welcome, {user.firstName}!</h1>
+      <p>Email: {user.primaryEmailAddress?.emailAddress}</p>
+    </div>
+  )
+}
+```
+
+### useClerk Hook
+
+Access Clerk methods for authentication actions:
+
+```tsx
+import { useClerk } from '@clerk/clerk-react'
+
+function SignOutButton() {
+  const { signOut } = useClerk()
+
+  return (
+    <button onClick={() => signOut()}>
+      Sign Out
+    </button>
+  )
+}
+```
+
+### useAuth Hook
+
+Access authentication state and session information:
+
+```tsx
+import { useAuth } from '@clerk/clerk-react'
+
+function ProtectedComponent() {
+  const { isLoaded, userId, sessionId, getToken } = useAuth()
+
+  if (!isLoaded) {
+    return <div>Loading...</div>
+  }
+
+  return (
+    <div>
+      <p>User ID: {userId}</p>
+      <p>Session ID: {sessionId}</p>
+    </div>
+  )
+}
+```
+
+## User Management
+
+Clerk provides comprehensive user management features:
+
+### User Profile
+
+Use the `<UserProfile />` component for a complete user settings interface:
+
+```tsx
+import { UserProfile } from '@clerk/clerk-react'
+
+function UserProfilePage() {
+  return (
+    <div className="flex justify-center p-8">
+      <UserProfile />
+    </div>
+  )
+}
+```
+
+### User Button
+
+Add a user menu with account management:
+
+```tsx
+import { UserButton } from '@clerk/clerk-react'
+
+function Header() {
+  return (
+    <header>
+      <UserButton afterSignOutUrl="/clerk/sign-in" />
+    </header>
+  )
+}
+```
+
+## API Integration
+
+Access Clerk session tokens for authenticated API requests:
+
+```tsx
+import { useAuth } from '@clerk/clerk-react'
+import axios from 'axios'
+
+function useAuthenticatedAPI() {
+  const { getToken } = useAuth()
+
+  const fetchData = async () => {
+    const token = await getToken()
+    
+    const response = await axios.get('/api/data', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    return response.data
+  }
+
+  return { fetchData }
+}
+```
+
+## Customization
+
+### Theming
+
+Customize Clerk components to match your design:
+
+```tsx
+import { ClerkProvider } from '@clerk/clerk-react'
+
+<ClerkProvider
+  publishableKey={PUBLISHABLE_KEY}
+  appearance={{
+    variables: {
+      colorPrimary: 'hsl(var(--primary))',
+      colorBackground: 'hsl(var(--background))',
+      colorText: 'hsl(var(--foreground))',
+    },
+    elements: {
+      formButtonPrimary: 'bg-primary text-primary-foreground',
+      card: 'bg-card',
+    },
+  }}
+>
+  {/* ... */}
+</ClerkProvider>
+```
+
+### Localization
+
+Clerk supports multiple languages:
+
+```tsx
+import { ClerkProvider } from '@clerk/clerk-react'
+
+<ClerkProvider
+  publishableKey={PUBLISHABLE_KEY}
+  localization={{
+    locale: 'en-US',
+  }}
+>
+  {/* ... */}
+</ClerkProvider>
+```
+
+## Migration Guide
+
+### Using Clerk App-Wide
+
+To use Clerk throughout your entire application instead of just the `/clerk` route:
+
+<Steps>
+  <Step title="Move ClerkProvider to Root">
+    Wrap your entire app in `ClerkProvider` in `src/main.tsx` or `src/routes/__root.tsx`:
+
+    ```tsx src/main.tsx
+    import { ClerkProvider } from '@clerk/clerk-react'
+
+    root.render(
+      <StrictMode>
+        <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              <DirectionProvider>
+                <RouterProvider router={router} />
+              </DirectionProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </ClerkProvider>
+      </StrictMode>
+    )
+    ```
+  </Step>
+
+  <Step title="Update Protected Routes">
+    Use TanStack Router's `beforeLoad` to protect routes:
+
+    ```tsx
+    export const Route = createFileRoute('/_authenticated')({
+      beforeLoad: ({ context }) => {
+        const { isSignedIn } = context.auth
+        if (!isSignedIn) {
+          throw redirect({ to: '/sign-in' })
+        }
+      },
+    })
+    ```
+  </Step>
+
+  <Step title="Remove /clerk Directory">
+    If using Clerk app-wide, you can remove the isolated `/clerk` route directory.
+  </Step>
+</Steps>
+
+### Removing Clerk
+
+If you decide not to use Clerk:
+
+<Steps>
+  <Step title="Remove Dependency">
+    ```bash
+    pnpm remove @clerk/clerk-react
+    ```
+  </Step>
+
+  <Step title="Delete Clerk Routes">
+    ```bash
+    rm -rf src/routes/clerk
+    ```
+  </Step>
+
+  <Step title="Remove Environment Variable">
+    Delete `VITE_CLERK_PUBLISHABLE_KEY` from your `.env` file.
+  </Step>
+</Steps>
+
+<Note>
+  The application includes a custom authentication implementation using Zustand (see `src/stores/auth-store.ts`) that you can use or customize for your needs.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Missing Publishable Key error">
+    The app shows a helpful UI when the Clerk key is missing. Follow the instructions to:
+    
+    1. Get your key from Clerk Dashboard
+    2. Rename `.env.example` to `.env`
+    3. Add your key: `VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxx`
+    4. Restart the dev server
+  </Accordion>
+
+  <Accordion title="Clerk components not styled correctly">
+    Ensure you're using the `appearance` prop to match Clerk's styling with your theme. See the [Customization](#customization) section.
+  </Accordion>
+
+  <Accordion title="Sign in redirects not working">
+    Verify the redirect URLs in your `ClerkProvider` match your actual route structure:
+    
+    ```tsx
+    <ClerkProvider
+      signInUrl='/your-sign-in-route'
+      signInFallbackRedirectUrl='/your-dashboard-route'
+    >
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Clerk Documentation" href="https://clerk.com/docs" icon="book">
+    Official Clerk documentation and guides
+  </Card>
+
+  <Card title="React SDK Reference" href="https://clerk.com/docs/references/react/overview" icon="code">
+    Complete API reference for Clerk React
+  </Card>
+
+  <Card title="Dashboard" href="https://go.clerk.com/GttUAaK" icon="gauge">
+    Manage users and configure your Clerk application
+  </Card>
+
+  <Card title="State Management" href="/guides/state-management" icon="database">
+    Learn about the custom auth store implementation
+  </Card>
+</CardGroup>

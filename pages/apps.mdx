@@ -1,0 +1,380 @@
+---
+title: Apps Page
+description: App integrations page with filtering, sorting, and connection management
+icon: 'grid-2x2'
+---
+
+The Apps page displays a grid of application integrations with filtering, sorting, and connection status management.
+
+## Overview
+
+The Apps component provides a visual interface for managing third-party app integrations with search, filter, and sort capabilities.
+
+**Location:** `src/features/apps/index.tsx`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Grid Layout" icon="grid-3x3">
+    Responsive card grid for displaying apps
+  </Card>
+  <Card title="Search & Filter" icon="filter">
+    Search by name and filter by connection status
+  </Card>
+  <Card title="Sorting" icon="arrow-down-a-z">
+    Sort apps alphabetically (ascending/descending)
+  </Card>
+  <Card title="URL State Sync" icon="link">
+    Filters and sort order persist in URL
+  </Card>
+</CardGroup>
+
+## Component Structure
+
+The Apps page uses URL state management for filters and sorting:
+
+```tsx src/features/apps/index.tsx
+type AppType = 'all' | 'connected' | 'notConnected'
+
+export function Apps() {
+  const {
+    filter = '',
+    type = 'all',
+    sort: initSort = 'asc',
+  } = route.useSearch()
+  const navigate = route.useNavigate()
+
+  const [sort, setSort] = useState(initSort)
+  const [appType, setAppType] = useState(type)
+  const [searchTerm, setSearchTerm] = useState(filter)
+
+  const filteredApps = apps
+    .sort((a, b) =>
+      sort === 'asc'
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name)
+    )
+    .filter((app) =>
+      appType === 'connected'
+        ? app.connected
+        : appType === 'notConnected'
+          ? !app.connected
+          : true
+    )
+    .filter((app) => app.name.toLowerCase().includes(searchTerm.toLowerCase()))
+
+  return (
+    <>
+      <Header>
+        <Search />
+        <div className='ms-auto flex items-center gap-4'>
+          <ThemeSwitch />
+          <ConfigDrawer />
+          <ProfileDropdown />
+        </div>
+      </Header>
+
+      <Main fixed>
+        <div>
+          <h1 className='text-2xl font-bold tracking-tight'>
+            App Integrations
+          </h1>
+          <p className='text-muted-foreground'>
+            Here&apos;s a list of your apps for the integration!
+          </p>
+        </div>
+        {/* Filters and grid */}
+      </Main>
+    </>
+  )
+}
+```
+
+## Filtering and Sorting Controls
+
+The page provides search, filter, and sort controls:
+
+```tsx
+<div className='my-4 flex items-end justify-between sm:items-center'>
+  <div className='flex flex-col gap-4 sm:flex-row'>
+    {/* Search Input */}
+    <Input
+      placeholder='Filter apps...'
+      className='h-9 w-40 lg:w-[250px]'
+      value={searchTerm}
+      onChange={handleSearch}
+    />
+    
+    {/* Type Filter */}
+    <Select value={appType} onValueChange={handleTypeChange}>
+      <SelectTrigger className='w-36'>
+        <SelectValue>{appText.get(appType)}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value='all'>All Apps</SelectItem>
+        <SelectItem value='connected'>Connected</SelectItem>
+        <SelectItem value='notConnected'>Not Connected</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  {/* Sort Dropdown */}
+  <Select value={sort} onValueChange={handleSortChange}>
+    <SelectTrigger className='w-16'>
+      <SelectValue>
+        <SlidersHorizontal size={18} />
+      </SelectValue>
+    </SelectTrigger>
+    <SelectContent align='end'>
+      <SelectItem value='asc'>
+        <div className='flex items-center gap-4'>
+          <ArrowUpAZ size={16} />
+          <span>Ascending</span>
+        </div>
+      </SelectItem>
+      <SelectItem value='desc'>
+        <div className='flex items-center gap-4'>
+          <ArrowDownAZ size={16} />
+          <span>Descending</span>
+        </div>
+      </SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+```
+
+## URL State Management
+
+Filters and sorting update the URL for shareability:
+
+```tsx
+const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
+  setSearchTerm(e.target.value)
+  navigate({
+    search: (prev) => ({
+      ...prev,
+      filter: e.target.value || undefined,
+    }),
+  })
+}
+
+const handleTypeChange = (value: AppType) => {
+  setAppType(value)
+  navigate({
+    search: (prev) => ({
+      ...prev,
+      type: value === 'all' ? undefined : value,
+    }),
+  })
+}
+
+const handleSortChange = (sort: 'asc' | 'desc') => {
+  setSort(sort)
+  navigate({ search: (prev) => ({ ...prev, sort }) })
+}
+```
+
+Example URLs:
+- All apps: `/apps`
+- Connected only: `/apps?type=connected`
+- Search with sort: `/apps?filter=slack&sort=desc`
+
+## App Grid
+
+Apps are displayed in a responsive grid:
+
+```tsx
+<Separator className='shadow-sm' />
+<ul className='grid gap-4 overflow-auto pt-4 pb-16 md:grid-cols-2 lg:grid-cols-3'>
+  {filteredApps.map((app) => (
+    <li
+      key={app.name}
+      className='rounded-lg border p-4 hover:shadow-md'
+    >
+      <div className='mb-8 flex items-center justify-between'>
+        <div className='flex size-10 items-center justify-center rounded-lg bg-muted p-2'>
+          {app.logo}
+        </div>
+        <Button
+          variant='outline'
+          size='sm'
+          className={`${
+            app.connected
+              ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950'
+              : ''
+          }`}
+        >
+          {app.connected ? 'Connected' : 'Connect'}
+        </Button>
+      </div>
+      <div>
+        <h2 className='mb-1 font-semibold'>{app.name}</h2>
+        <p className='line-clamp-2 text-gray-500'>{app.desc}</p>
+      </div>
+    </li>
+  ))}
+</ul>
+```
+
+## App Data Structure
+
+Apps are defined with icon components and metadata:
+
+```tsx src/features/apps/data/apps.tsx
+import {
+  IconTelegram,
+  IconNotion,
+  IconFigma,
+  // ... more icons
+} from '@/assets/brand-icons'
+
+export const apps = [
+  {
+    name: 'Telegram',
+    logo: <IconTelegram />,
+    connected: false,
+    desc: 'Connect with Telegram for real-time communication.',
+  },
+  {
+    name: 'Notion',
+    logo: <IconNotion />,
+    connected: true,
+    desc: 'Effortlessly sync Notion pages for seamless collaboration.',
+  },
+  {
+    name: 'Figma',
+    logo: <IconFigma />,
+    connected: true,
+    desc: 'View and collaborate on Figma designs in one place.',
+  },
+  // More apps...
+]
+```
+
+## Available Integrations
+
+The template includes 15 popular app integrations:
+
+<CardGroup cols={3}>
+  <Card title="Communication">
+    Telegram, Slack, Skype, Discord, WhatsApp
+  </Card>
+  <Card title="Productivity">
+    Notion, Figma, Trello, GitHub, GitLab
+  </Card>
+  <Card title="Business">
+    Zoom, Stripe, Gmail, Medium, Docker
+  </Card>
+</CardGroup>
+
+## Customization
+
+### Adding New Apps
+
+Extend the apps array in `apps/data/apps.tsx`:
+
+```tsx
+import { IconCustomApp } from '@/assets/brand-icons'
+
+export const apps = [
+  // ... existing apps
+  {
+    name: 'Custom App',
+    logo: <IconCustomApp />,
+    connected: false,
+    desc: 'Description of your custom app integration.',
+  },
+]
+```
+
+### Custom Connection States
+
+Implement different connection statuses:
+
+```tsx
+type ConnectionStatus = 'connected' | 'pending' | 'disconnected' | 'error'
+
+const getStatusBadge = (status: ConnectionStatus) => {
+  const badges = {
+    connected: 'bg-green-50 text-green-700 border-green-300',
+    pending: 'bg-yellow-50 text-yellow-700 border-yellow-300',
+    disconnected: 'bg-gray-50 text-gray-700 border-gray-300',
+    error: 'bg-red-50 text-red-700 border-red-300',
+  }
+  return badges[status]
+}
+```
+
+### Changing Grid Layout
+
+Adjust responsive breakpoints:
+
+```tsx
+<ul className='grid gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
+  {/* More columns on larger screens */}
+</ul>
+```
+
+### Custom Card Styles
+
+Modify the app card appearance:
+
+```tsx
+<li className='group rounded-xl border-2 p-6 transition-all hover:border-primary hover:shadow-lg'>
+  <div className='mb-6 flex items-center justify-between'>
+    <div className='flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 p-3'>
+      {app.logo}
+    </div>
+    <Button
+      variant={app.connected ? 'default' : 'outline'}
+      size='sm'
+    >
+      {app.connected ? 'Disconnect' : 'Connect'}
+    </Button>
+  </div>
+  <div>
+    <h2 className='mb-2 text-lg font-semibold'>{app.name}</h2>
+    <p className='line-clamp-3 text-sm text-muted-foreground'>{app.desc}</p>
+  </div>
+</li>
+```
+
+### Adding App Categories
+
+Group apps by category:
+
+```tsx
+const categories = ['Communication', 'Productivity', 'Business']
+
+{categories.map((category) => (
+  <div key={category}>
+    <h2 className='mb-4 text-xl font-semibold'>{category}</h2>
+    <ul className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+      {filteredApps
+        .filter((app) => app.category === category)
+        .map((app) => (
+          <li key={app.name}>{/* App card */}</li>
+        ))}
+    </ul>
+  </div>
+))}
+```
+
+## Components Used
+
+- `Input` from `@/components/ui/input`
+- `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` from `@/components/ui/select`
+- `Button` from `@/components/ui/button`
+- `Separator` from `@/components/ui/separator`
+- `Header`, `Main` from `@/components/layout`
+- Icons from `lucide-react`: `SlidersHorizontal`, `ArrowUpAZ`, `ArrowDownAZ`
+- Brand icons from `@/assets/brand-icons`
+
+## File Structure
+
+```
+src/features/apps/
+├── index.tsx                # Main apps page with filtering
+├── data/
+│   └── apps.tsx             # App definitions with icons
+```

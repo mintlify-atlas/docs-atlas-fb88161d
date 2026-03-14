@@ -1,80 +1,452 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Build your first admin dashboard with Shadcn Admin in minutes
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will help you understand the basic structure of Shadcn Admin and make your first customizations.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Make sure you've completed the [Installation](/installation) steps before proceeding.
 </Note>
+
+## Start the Development Server
+
+If you haven't already, start the development server:
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm run dev
+  ```
+
+  ```bash npm
+  npm run dev
+  ```
+
+  ```bash yarn
+  yarn dev
+  ```
+</CodeGroup>
+
+Open your browser to `http://localhost:5173` to see your dashboard.
+
+## Explore the Dashboard
+
+The default Shadcn Admin dashboard includes several pre-built pages and features:
+
+<CardGroup cols={2}>
+  <Card title="Dashboard" icon="chart-line">
+    Overview page with charts, statistics, and recent activity
+  </Card>
+  <Card title="Tasks" icon="list-check">
+    Task management with data tables and filtering
+  </Card>
+  <Card title="Users" icon="users">
+    User management interface with CRUD operations
+  </Card>
+  <Card title="Settings" icon="gear">
+    Multi-tab settings page with profile, account, and appearance options
+  </Card>
+  <Card title="Authentication Pages" icon="lock">
+    Sign in, sign up, forgot password, and OTP pages
+  </Card>
+  <Card title="Error Pages" icon="triangle-alert">
+    401, 403, 404, 500, and maintenance error pages
+  </Card>
+</CardGroup>
+
+### Key Features to Try
+
+<Steps>
+  <Step title="Toggle Dark Mode">
+    Click the theme toggle in the top navigation to switch between light and dark modes. The theme preference is persisted in localStorage.
+  </Step>
+
+  <Step title="Use Global Search">
+    Press `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux) to open the command menu. Try searching for pages and navigation items.
+  </Step>
+
+  <Step title="Collapse the Sidebar">
+    Click the sidebar toggle button or press `Cmd+B` / `Ctrl+B` to collapse and expand the sidebar. The state is saved in a cookie.
+  </Step>
+
+  <Step title="Change Sidebar Variant">
+    Click the settings icon to open the configuration drawer and try different sidebar variants:
+    - **Sidebar** (default) - Fixed sidebar
+    - **Floating** - Floating sidebar with rounded corners
+    - **Inset** - Inset sidebar with padding
+  </Step>
+</Steps>
+
+## Understand the Structure
+
+### Application Entry Point
+
+The application starts in `src/main.tsx`:
+
+```tsx src/main.tsx
+import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from './context/theme-provider'
+import { routeTree } from './routeTree.gen'
+
+const queryClient = new QueryClient()
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+})
+
+root.render(
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
+      <FontProvider>
+        <DirectionProvider>
+          <RouterProvider router={router} />
+        </DirectionProvider>
+      </FontProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
+)
+```
+
+The app is wrapped in several providers:
+- **QueryClientProvider** - TanStack Query for data fetching
+- **ThemeProvider** - Light/dark mode management
+- **FontProvider** - Custom font configuration
+- **DirectionProvider** - RTL support
+
+### Routing Structure
+
+Shadcn Admin uses **TanStack Router** with file-based routing. Routes are defined in `src/routes/`:
+
+```
+routes/
+├── __root.tsx              # Root layout
+├── _authenticated/         # Protected routes
+│   ├── route.tsx          # Layout with sidebar
+│   ├── index.tsx          # Dashboard (/)
+│   ├── tasks/             # Tasks pages
+│   ├── users/             # Users pages
+│   └── settings/          # Settings pages
+├── (auth)/                # Auth pages (no layout)
+│   ├── sign-in.tsx
+│   └── sign-up.tsx
+└── (errors)/              # Error pages
+    ├── 404.tsx
+    └── 500.tsx
+```
+
+### Sidebar Configuration
+
+The sidebar is configured in `src/components/layout/data/sidebar-data.ts`:
+
+```typescript src/components/layout/data/sidebar-data.ts
+export const sidebarData: SidebarData = {
+  user: {
+    name: 'satnaing',
+    email: 'satnaingdev@gmail.com',
+    avatar: '/avatars/shadcn.jpg',
+  },
+  teams: [
+    {
+      name: 'Shadcn Admin',
+      logo: Command,
+      plan: 'Vite + ShadcnUI',
+    },
+  ],
+  navGroups: [
+    {
+      title: 'General',
+      items: [
+        {
+          title: 'Dashboard',
+          url: '/',
+          icon: LayoutDashboard,
+        },
+        {
+          title: 'Tasks',
+          url: '/tasks',
+          icon: ListTodo,
+        },
+        // ... more items
+      ],
+    },
+  ],
+}
+```
+
+## Make Your First Customization
+
+Let's customize the sidebar by adding a new navigation item.
+
+<Steps>
+  <Step title="Open the Sidebar Data File">
+    Open `src/components/layout/data/sidebar-data.ts` in your editor.
+  </Step>
+
+  <Step title="Add a New Navigation Item">
+    Add a new item to the `General` nav group:
+
+    ```typescript src/components/layout/data/sidebar-data.ts
+    import { FileText } from 'lucide-react' // Add this import
+
+    export const sidebarData: SidebarData = {
+      // ... existing config
+      navGroups: [
+        {
+          title: 'General',
+          items: [
+            {
+              title: 'Dashboard',
+              url: '/',
+              icon: LayoutDashboard,
+            },
+            {
+              title: 'Tasks',
+              url: '/tasks',
+              icon: ListTodo,
+            },
+            // Add this new item
+            {
+              title: 'Reports',
+              url: '/reports',
+              icon: FileText,
+            },
+            // ... other items
+          ],
+        },
+      ],
+    }
+    ```
+  </Step>
+
+  <Step title="Save and Check">
+    Save the file and check your browser. You should see the new "Reports" item in the sidebar.
+
+    <Tip>
+      Vite's Hot Module Replacement (HMR) will automatically update the page without a full refresh.
+    </Tip>
+  </Step>
+
+  <Step title="Create the Route (Optional)">
+    To make the link functional, create a new route file:
+
+    ```tsx src/routes/_authenticated/reports.tsx
+    import { createFileRoute } from '@tanstack/react-router'
+
+    export const Route = createFileRoute('/_authenticated/reports')({
+      component: ReportsPage,
+    })
+
+    function ReportsPage() {
+      return (
+        <div className="space-y-4">
+          <h1 className="text-3xl font-bold">Reports</h1>
+          <p className="text-muted-foreground">
+            Your reports will appear here.
+          </p>
+        </div>
+      )
+    }
+    ```
+  </Step>
+</Steps>
+
+## Customize the Theme
+
+Shadcn Admin uses CSS variables for theming, making it easy to customize colors.
+
+### Change Primary Color
+
+Edit `src/styles/index.css` to modify theme colors:
+
+```css src/styles/index.css
+@layer base {
+  :root {
+    --primary: 222.2 47.4% 11.2%;        /* Default primary color */
+    --primary-foreground: 210 40% 98%;   /* Text on primary */
+    /* Change to a blue theme: */
+    /* --primary: 221 83% 53%; */
+  }
+}
+```
+
+<Tip>
+  Use tools like [uicolors.app](https://uicolors.app) to generate HSL color values that work well with Shadcn UI.
+</Tip>
+
+## Working with Components
+
+Shadcn Admin includes all Shadcn UI components in `src/components/ui/`. These are highly customizable and accessible.
+
+### Using a Component
+
+Here's an example of using the Button and Card components:
+
+```tsx
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+
+function MyComponent() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Welcome</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p>This is a card component.</p>
+        <Button>Click me</Button>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+### Component Examples
+
+Explore the dashboard to see components in action:
+
+- **Data Tables** - See `src/routes/_authenticated/tasks/` for TanStack Table implementation
+- **Forms** - Check `src/routes/_authenticated/settings/` for React Hook Form examples
+- **Charts** - View `src/features/dashboard/` for Recharts integration
+- **Dialogs & Modals** - Look at `src/components/confirm-dialog.tsx`
+
+## Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Context Providers" icon="layer-group">
+    The app uses React Context for theme, layout, and search functionality. See `src/context/`.
+  </Card>
+  <Card title="State Management" icon="database">
+    Zustand is used for lightweight global state. Check `src/stores/`.
+  </Card>
+  <Card title="Type Safety" icon="shield">
+    Everything is fully typed with TypeScript for better DX and fewer bugs.
+  </Card>
+  <Card title="Responsive Design" icon="mobile">
+    All components are mobile-first and responsive out of the box.
+  </Card>
+</CardGroup>
+
+## RTL Support
+
+<Note>
+  Shadcn Admin includes built-in RTL (Right-to-Left) support for Arabic, Hebrew, and other RTL languages.
+</Note>
+
+Several components have been customized for RTL support:
+
+- **Modified Components**: scroll-area, sonner, separator
+- **RTL Updated Components**: alert-dialog, calendar, command, dialog, dropdown-menu, select, table, sheet, sidebar, switch
+
+To enable RTL mode, the `DirectionProvider` in `src/context/direction-provider.tsx` handles the layout direction.
+
+## Build for Production
+
+When you're ready to deploy:
+
+<Steps>
+  <Step title="Build the Project">
+    ```bash
+    pnpm run build
+    ```
+
+    This compiles TypeScript and bundles your app with Vite.
+  </Step>
+
+  <Step title="Preview the Build">
+    ```bash
+    pnpm run preview
+    ```
+
+    Test the production build locally before deploying.
+  </Step>
+
+  <Step title="Deploy">
+    Deploy the `dist/` folder to your hosting platform:
+    - **Vercel** - Connect your Git repository
+    - **Netlify** - Drag and drop the `dist` folder
+    - **Custom Server** - Serve the `dist` folder as static files
+  </Step>
+</Steps>
+
+<Tip>
+  The project includes a `netlify.toml` file with optimized configuration for Netlify deployments.
+</Tip>
+
+## Next Steps
+
+Now that you understand the basics, explore more advanced topics:
+
+<CardGroup cols={2}>
+  <Card title="Components Guide" icon="puzzle-piece" href="/components/overview">
+    Deep dive into available UI components
+  </Card>
+  <Card title="Routing" icon="route" href="/concepts/routing">
+    Learn about TanStack Router and navigation
+  </Card>
+  <Card title="Data Fetching" icon="database" href="/guides/api-integration">
+    Use TanStack Query for API integration
+  </Card>
+  <Card title="Forms" icon="file-input" href="/pages/settings">
+    Build forms with React Hook Form and Zod
+  </Card>
+  <Card title="Authentication" icon="key" href="/features/authentication">
+    Set up Clerk or custom authentication
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/guides/deploying">
+    Deploy your dashboard to production
+  </Card>
+</CardGroup>
+
+## Common Tasks
+
+<AccordionGroup>
+  <Accordion title="How do I add a new page?">
+    1. Create a new file in `src/routes/_authenticated/`
+    2. Define the route using `createFileRoute`
+    3. Add a navigation item in `src/components/layout/data/sidebar-data.ts`
+    
+    Example:
+    ```tsx
+    // src/routes/_authenticated/my-page.tsx
+    import { createFileRoute } from '@tanstack/react-router'
+
+    export const Route = createFileRoute('/_authenticated/my-page')({
+      component: MyPage,
+    })
+
+    function MyPage() {
+      return <div>My new page</div>
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="How do I change the logo?">
+    The logo is configured in the TeamSwitcher component. Edit:
+    - `src/components/layout/team-switcher.tsx` - Component implementation
+    - `src/components/layout/data/sidebar-data.ts` - Team/logo data
+  </Accordion>
+
+  <Accordion title="How do I modify the dashboard charts?">
+    Dashboard charts are in `src/features/dashboard/`. They use Recharts library. Modify the data and configuration in the respective component files.
+  </Accordion>
+
+  <Accordion title="How do I change the sidebar behavior?">
+    The sidebar uses the `useSidebar` hook from `src/components/ui/sidebar.tsx`. You can customize:
+    - **Collapsible mode**: Set in `src/components/layout/app-sidebar.tsx`
+    - **Variant**: Changed via the config drawer or layout provider
+    - **Keyboard shortcut**: Defined as `SIDEBAR_KEYBOARD_SHORTCUT` in sidebar.tsx (default: 'b')
+  </Accordion>
+</AccordionGroup>
+
+## Get Help
+
+If you run into issues:
+
+- Check the [GitHub Issues](https://github.com/satnaing/shadcn-admin/issues)
+- Review the source code - it's well-documented
+- Join the community discussions
+
+<Card title="Star on GitHub" icon="github" href="https://github.com/satnaing/shadcn-admin">
+  If you find Shadcn Admin helpful, give it a star on GitHub!
+</Card>

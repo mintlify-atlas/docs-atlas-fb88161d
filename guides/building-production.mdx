@@ -1,0 +1,325 @@
+---
+title: Building for Production
+description: Build and optimize your Shadcn Admin application for production deployment
+---
+
+## Build Process
+
+The production build process involves TypeScript type-checking followed by Vite's optimized build.
+
+### Build Command
+
+Run the production build:
+
+```bash
+pnpm run build
+```
+
+This executes the following script from `package.json`:
+
+```json
+"build": "tsc -b && vite build"
+```
+
+<Steps>
+  <Step title="TypeScript Type Checking">
+    First, `tsc -b` performs a full TypeScript type check across your entire codebase to catch any type errors before building.
+
+    ```bash
+    tsc -b
+    ```
+
+    <Note>
+      The build will fail if there are any TypeScript errors. Fix all type errors before proceeding.
+    </Note>
+  </Step>
+
+  <Step title="Vite Build">
+    After successful type checking, Vite bundles and optimizes your application:
+
+    ```bash
+    vite build
+    ```
+
+    This creates optimized production assets in the `dist` directory.
+  </Step>
+</Steps>
+
+## Build Output
+
+The production build creates a `dist` folder containing:
+
+```
+dist/
+├── assets/
+│   ├── index-[hash].js      # Main JavaScript bundle
+│   ├── vendor-[hash].js     # Third-party dependencies
+│   └── index-[hash].css     # Compiled styles
+├── images/                   # Optimized images
+└── index.html               # Entry HTML file
+```
+
+### File Hashing
+
+Vite automatically adds content hashes to filenames for optimal cache busting:
+
+- Changed files get new hashes
+- Unchanged files keep the same hash
+- Browsers can cache assets indefinitely
+
+## Optimization Features
+
+### Automatic Code Splitting
+
+The project uses TanStack Router's `autoCodeSplitting` feature to automatically split routes into separate chunks:
+
+```ts vite.config.ts
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
+
+export default defineConfig({
+  plugins: [
+    tanstackRouter({
+      target: 'react',
+      autoCodeSplitting: true,
+    }),
+  ],
+})
+```
+
+This means:
+
+- Each route is loaded on-demand
+- Smaller initial bundle size
+- Faster first page load
+- Better caching granularity
+
+### Tree Shaking
+
+Vite performs aggressive tree shaking to remove unused code:
+
+- Only imported exports are included
+- Dead code is eliminated
+- Unused dependencies are excluded
+
+### Minification
+
+JavaScript and CSS are automatically minified:
+
+- Variable names are shortened
+- Whitespace is removed
+- Comments are stripped
+- Code is optimized for size
+
+### Asset Optimization
+
+<CardGroup cols={2}>
+  <Card title="Images" icon="image">
+    Images in `public/images/` are copied to the output directory. Consider using optimized formats like WebP.
+  </Card>
+
+  <Card title="CSS" icon="palette">
+    Tailwind CSS is purged of unused styles, and critical CSS can be inlined for better performance.
+  </Card>
+</CardGroup>
+
+## Preview Production Build
+
+Test your production build locally before deploying:
+
+```bash
+pnpm run preview
+```
+
+This serves the `dist` folder using Vite's preview server, typically at `http://localhost:4173`.
+
+<Warning>
+  The preview server is for local testing only and should not be used in production. Use a proper static file server or hosting platform for deployment.
+</Warning>
+
+## TypeScript Strict Mode
+
+The project enforces strict TypeScript settings for better code quality:
+
+```json tsconfig.app.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
+}
+```
+
+Benefits:
+
+- Catch errors at compile time
+- Better IDE autocomplete
+- Self-documenting code
+- Easier refactoring
+
+## Build Optimizations
+
+### React SWC Plugin
+
+The project uses SWC instead of Babel for faster builds:
+
+```ts vite.config.ts
+import react from '@vitejs/plugin-react-swc'
+
+export default defineConfig({
+  plugins: [react()],
+})
+```
+
+**Benefits:**
+
+- 20x faster than Babel
+- Lower memory usage
+- Smaller bundle sizes
+
+### Tailwind CSS v4
+
+Tailwind CSS v4 with Vite plugin provides optimized CSS processing:
+
+```ts vite.config.ts
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [tailwindcss()],
+})
+```
+
+## Environment Variables
+
+### Production Variables
+
+Set production environment variables in your hosting platform or create a `.env.production` file:
+
+```bash .env.production
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_xxxxx
+```
+
+<Note>
+  Remember: Only variables prefixed with `VITE_` are exposed to the client-side code.
+</Note>
+
+### Build-time vs Runtime
+
+Vite environment variables are embedded at build time:
+
+```tsx
+// This is replaced at build time
+const apiKey = import.meta.env.VITE_API_KEY
+```
+
+For runtime configuration, consider using a config endpoint or window object.
+
+## Build Size Analysis
+
+Analyze your bundle size to identify optimization opportunities:
+
+1. **Install rollup-plugin-visualizer:**
+
+```bash
+pnpm add -D rollup-plugin-visualizer
+```
+
+2. **Add to vite.config.ts:**
+
+```ts
+import { visualizer } from 'rollup-plugin-visualizer'
+
+export default defineConfig({
+  plugins: [
+    // ... other plugins
+    visualizer({ open: true }),
+  ],
+})
+```
+
+3. **Build and view the report:**
+
+```bash
+pnpm run build
+```
+
+A `stats.html` file will open showing your bundle composition.
+
+## Pre-deployment Checklist
+
+<Steps>
+  <Step title="Run Type Checking">
+    ```bash
+    pnpm run build
+    ```
+    Ensure no TypeScript errors.
+  </Step>
+
+  <Step title="Run Linter">
+    ```bash
+    pnpm run lint
+    ```
+    Fix any linting issues.
+  </Step>
+
+  <Step title="Format Code">
+    ```bash
+    pnpm run format:check
+    ```
+    Ensure consistent code formatting.
+  </Step>
+
+  <Step title="Check for Unused Code">
+    ```bash
+    pnpm run knip
+    ```
+    Remove unused files and dependencies.
+  </Step>
+
+  <Step title="Test Production Build">
+    ```bash
+    pnpm run preview
+    ```
+    Verify the production build works correctly.
+  </Step>
+
+  <Step title="Verify Environment Variables">
+    Ensure all required production environment variables are set.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with TypeScript errors">
+    - Run `tsc -b` separately to see all type errors
+    - Fix errors one by one
+    - Consider using `// @ts-expect-error` with comments for known issues
+  </Accordion>
+
+  <Accordion title="Large bundle size">
+    - Use the bundle visualizer to identify large dependencies
+    - Implement lazy loading for heavy components
+    - Consider using lighter alternatives for large libraries
+  </Accordion>
+
+  <Accordion title="Missing environment variables in production">
+    - Verify variables are prefixed with `VITE_`
+    - Check they're set in your hosting platform
+    - Use `console.log(import.meta.env)` to debug (remove before deploying)
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deploying" href="/guides/deploying" icon="rocket">
+    Deploy your production build to various hosting platforms.
+  </Card>
+
+  <Card title="Performance Optimization" href="/guides/performance-optimization" icon="gauge">
+    Learn advanced performance optimization techniques.
+  </Card>
+</CardGroup>

@@ -1,0 +1,656 @@
+---
+title: Performance Optimization
+description: Optimize your Shadcn Admin application for maximum performance and user experience
+---
+
+## Overview
+
+Shadcn Admin is built with performance in mind, using modern tools and techniques for fast load times and smooth interactions. This guide covers built-in optimizations and advanced techniques.
+
+## Built-in Optimizations
+
+### Automatic Code Splitting
+
+TanStack Router automatically splits your application by route:
+
+```ts vite.config.ts
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
+
+export default defineConfig({
+  plugins: [
+    tanstackRouter({
+      target: 'react',
+      autoCodeSplitting: true, // Automatic route-based code splitting
+    }),
+  ],
+})
+```
+
+**Benefits:**
+- Each route loads only when needed
+- Smaller initial bundle size
+- Faster first contentful paint
+- Better caching granularity
+
+### React Fast Refresh with SWC
+
+The project uses SWC instead of Babel for up to 20x faster builds:
+
+```ts vite.config.ts
+import react from '@vitejs/plugin-react-swc'
+
+export default defineConfig({
+  plugins: [react()],
+})
+```
+
+**Advantages:**
+- Lightning-fast hot module replacement
+- Faster production builds
+- Lower memory usage during development
+
+### Optimized Dependencies
+
+Key performance-focused dependencies:
+
+```json package.json
+{
+  "dependencies": {
+    "clsx": "^2.1.1",              // Tiny utility for className
+    "tailwind-merge": "^3.4.0",    // Optimized Tailwind class merging
+    "zustand": "^5.0.9"            // Minimal state management
+  }
+}
+```
+
+## React Performance Patterns
+
+### Memoization
+
+The codebase uses memoization to prevent unnecessary re-renders:
+
+```tsx src/context/theme-provider.tsx
+import { useMemo } from 'react'
+
+export function ThemeProvider({ children, defaultTheme }) {
+  const [theme, _setTheme] = useState(defaultTheme)
+
+  // Memoize expensive calculations
+  const resolvedTheme = useMemo((): ResolvedTheme => {
+    if (theme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    }
+    return theme as ResolvedTheme
+  }, [theme])
+
+  // ... rest of component
+}
+```
+
+### Lazy Loading Components
+
+Lazy load heavy components that aren't immediately needed:
+
+```tsx
+import { lazy, Suspense } from 'react'
+
+// Lazy load chart component
+const RevenueChart = lazy(() => import('./components/revenue-chart'))
+
+function Dashboard() {
+  return (
+    <Suspense fallback={<ChartSkeleton />}>
+      <RevenueChart data={data} />
+    </Suspense>
+  )
+}
+```
+
+### useCallback for Event Handlers
+
+Prevent function recreation on every render:
+
+```tsx
+import { useCallback } from 'react'
+
+function UserList() {
+  const [users, setUsers] = useState([])
+
+  // Memoize callback to prevent child re-renders
+  const handleDelete = useCallback((id: string) => {
+    setUsers(prev => prev.filter(u => u.id !== id))
+  }, [])
+
+  return (
+    <>
+      {users.map(user => (
+        <UserCard key={user.id} user={user} onDelete={handleDelete} />
+      ))}
+    </>
+  )
+}
+```
+
+### React.memo for Pure Components
+
+Memoize components that render the same output for the same props:
+
+```tsx
+import { memo } from 'react'
+
+interface UserCardProps {
+  user: User
+  onDelete: (id: string) => void
+}
+
+export const UserCard = memo(function UserCard({ user, onDelete }: UserCardProps) {
+  return (
+    <div className="card">
+      <h3>{user.name}</h3>
+      <button onClick={() => onDelete(user.id)}>Delete</button>
+    </div>
+  )
+})
+```
+
+## TanStack Query Optimizations
+
+### Query Configuration
+
+Optimize data fetching with proper configuration:
+
+```tsx src/main.tsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10 * 1000, // Data fresh for 10 seconds
+      refetchOnWindowFocus: import.meta.env.PROD, // Only in production
+      retry: (failureCount, error) => {
+        // Smart retry logic
+        if (failureCount >= 0 && import.meta.env.DEV) return false
+        if (failureCount > 3 && import.meta.env.PROD) return false
+        return !(
+          error instanceof AxiosError &&
+          [401, 403].includes(error.response?.status ?? 0)
+        )
+      },
+    },
+  },
+})
+```
+
+### Prefetching Data
+
+Prefetch data before users navigate:
+
+```tsx
+import { useQueryClient } from '@tanstack/react-query'
+
+function UserList() {
+  const queryClient = useQueryClient()
+
+  const handleUserHover = (userId: string) => {
+    // Prefetch user details on hover
+    queryClient.prefetchQuery({
+      queryKey: ['users', userId],
+      queryFn: () => fetchUser(userId),
+    })
+  }
+
+  return (
+    <div>
+      {users.map(user => (
+        <div 
+          key={user.id} 
+          onMouseEnter={() => handleUserHover(user.id)}
+        >
+          {user.name}
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+### Pagination and Infinite Queries
+
+Use pagination for large datasets:
+
+```tsx
+import { useInfiniteQuery } from '@tanstack/react-query'
+
+function InfiniteUserList() {
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['users'],
+    queryFn: ({ pageParam = 1 }) => fetchUsers({ page: pageParam }),
+    getNextPageParam: (lastPage, pages) => lastPage.nextPage,
+    initialPageParam: 1,
+  })
+
+  return (
+    <div>
+      {data?.pages.map(page =>
+        page.users.map(user => <UserCard key={user.id} user={user} />)
+      )}
+      {hasNextPage && (
+        <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+          Load More
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
+## Image Optimization
+
+### Use Proper Formats
+
+Use modern image formats for better compression:
+
+```tsx
+// Use WebP with fallback
+<picture>
+  <source srcSet="/images/hero.webp" type="image/webp" />
+  <source srcSet="/images/hero.jpg" type="image/jpeg" />
+  <img src="/images/hero.jpg" alt="Hero" />
+</picture>
+```
+
+### Lazy Load Images
+
+Use native lazy loading for images:
+
+```tsx
+<img 
+  src="/images/product.jpg" 
+  alt="Product" 
+  loading="lazy"
+  decoding="async"
+/>
+```
+
+### Responsive Images
+
+Provide different sizes for different viewports:
+
+```tsx
+<img
+  srcSet="
+    /images/hero-400.jpg 400w,
+    /images/hero-800.jpg 800w,
+    /images/hero-1200.jpg 1200w
+  "
+  sizes="(max-width: 640px) 400px, (max-width: 1024px) 800px, 1200px"
+  src="/images/hero-800.jpg"
+  alt="Hero"
+/>
+```
+
+## CSS Optimization
+
+### Tailwind CSS Purging
+
+Tailwind automatically removes unused styles in production. Ensure all dynamic classes are safelisted if needed:
+
+```js tailwind.config.js
+module.exports = {
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
+  safelist: [
+    // Add dynamic classes that might be purged
+    'bg-red-500',
+    'bg-green-500',
+    'bg-blue-500',
+  ],
+}
+```
+
+### Utility Function Optimization
+
+The `cn()` utility is already optimized:
+
+```ts src/lib/utils.ts
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+// Efficient className merging
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+## Bundle Size Optimization
+
+### Analyze Bundle Size
+
+Install and configure the visualizer:
+
+```bash
+pnpm add -D rollup-plugin-visualizer
+```
+
+```ts vite.config.ts
+import { visualizer } from 'rollup-plugin-visualizer'
+
+export default defineConfig({
+  plugins: [
+    // ... other plugins
+    visualizer({
+      open: true,
+      gzipSize: true,
+      brotliSize: true,
+    }),
+  ],
+})
+```
+
+Run build to generate `stats.html`:
+
+```bash
+pnpm run build
+```
+
+### Tree Shaking
+
+Ensure imports are tree-shakeable:
+
+```tsx
+// ✅ Good - tree-shakeable
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+
+// ❌ Bad - imports everything
+import * as UI from '@/components/ui'
+```
+
+### Dynamic Imports
+
+Split heavy dependencies:
+
+```tsx
+// Only load chart library when needed
+const loadChartLibrary = async () => {
+  const { Chart } = await import('recharts')
+  return Chart
+}
+
+function ChartComponent() {
+  const [Chart, setChart] = useState(null)
+
+  useEffect(() => {
+    loadChartLibrary().then(setChart)
+  }, [])
+
+  if (!Chart) return <Skeleton />
+  return <Chart data={data} />
+}
+```
+
+## Network Performance
+
+### HTTP/2 Server Push
+
+If you control the server, enable HTTP/2:
+
+```nginx
+server {
+  listen 443 ssl http2;
+  # ... SSL config
+}
+```
+
+### Resource Hints
+
+Add resource hints to `index.html`:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://api.example.com">
+    
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/fonts/main.woff2" as="font" type="font/woff2" crossorigin>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+```
+
+### Compression
+
+Enable gzip/brotli compression on your server:
+
+```nginx nginx.conf
+gzip on;
+gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+gzip_min_length 1000;
+
+# Even better: Brotli
+brotli on;
+brotli_types text/plain text/css application/json application/javascript text/xml application/xml;
+```
+
+## Runtime Performance
+
+### Virtual Scrolling
+
+For large lists, use virtual scrolling:
+
+```bash
+pnpm add @tanstack/react-virtual
+```
+
+```tsx
+import { useVirtualizer } from '@tanstack/react-virtual'
+
+function VirtualList({ items }) {
+  const parentRef = useRef(null)
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 50,
+  })
+
+  return (
+    <div ref={parentRef} style={{ height: '400px', overflow: 'auto' }}>
+      <div style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {virtualizer.getVirtualItems().map(virtualItem => (
+          <div
+            key={virtualItem.key}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              transform: `translateY(${virtualItem.start}px)`,
+            }}
+          >
+            {items[virtualItem.index].name}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### Debouncing and Throttling
+
+Optimize expensive operations:
+
+```tsx
+import { useMemo } from 'react'
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => clearTimeout(handler)
+  }, [value, delay])
+
+  return debouncedValue
+}
+
+// Usage in search
+function SearchUsers() {
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
+
+  const { data } = useQuery({
+    queryKey: ['users', debouncedSearch],
+    queryFn: () => fetchUsers({ search: debouncedSearch }),
+  })
+
+  return <input value={search} onChange={e => setSearch(e.target.value)} />
+}
+```
+
+## Measuring Performance
+
+### Web Vitals
+
+Monitor Core Web Vitals:
+
+```bash
+pnpm add web-vitals
+```
+
+```ts src/reportWebVitals.ts
+import { onCLS, onFID, onFCP, onLCP, onTTFB } from 'web-vitals'
+
+function sendToAnalytics(metric) {
+  console.log(metric)
+  // Send to your analytics service
+}
+
+export function reportWebVitals() {
+  onCLS(sendToAnalytics)
+  onFID(sendToAnalytics)
+  onFCP(sendToAnalytics)
+  onLCP(sendToAnalytics)
+  onTTFB(sendToAnalytics)
+}
+```
+
+```tsx src/main.tsx
+import { reportWebVitals } from './reportWebVitals'
+
+reportWebVitals()
+```
+
+### React DevTools Profiler
+
+Use the Profiler to identify slow renders:
+
+1. Install React DevTools browser extension
+2. Open DevTools → Profiler tab
+3. Click Record
+4. Interact with your app
+5. Click Stop
+6. Analyze render times
+
+### Lighthouse
+
+Run Lighthouse audits regularly:
+
+```bash
+pnpm run build
+pnpm run preview
+# Open Chrome DevTools → Lighthouse → Generate report
+```
+
+Target scores:
+- Performance: 90+
+- Accessibility: 100
+- Best Practices: 100
+- SEO: 90+
+
+## Performance Checklist
+
+<Steps>
+  <Step title="Enable Code Splitting">
+    - ✅ Route-based splitting enabled in Vite config
+    - [ ] Lazy load heavy components
+    - [ ] Dynamic imports for large libraries
+  </Step>
+
+  <Step title="Optimize React Rendering">
+    - [ ] Use React.memo for pure components
+    - [ ] Memoize expensive calculations with useMemo
+    - [ ] Use useCallback for event handlers
+    - [ ] Avoid inline object/array creation in render
+  </Step>
+
+  <Step title="Configure TanStack Query">
+    - ✅ Optimal stale time configured
+    - ✅ Smart retry logic implemented
+    - [ ] Prefetch on hover/intent
+    - [ ] Use pagination for large lists
+  </Step>
+
+  <Step title="Optimize Assets">
+    - [ ] Use WebP images with fallbacks
+    - [ ] Lazy load images
+    - [ ] Compress images before upload
+    - [ ] Use responsive images
+  </Step>
+
+  <Step title="Reduce Bundle Size">
+    - [ ] Analyze bundle with visualizer
+    - [ ] Tree-shake unused code
+    - [ ] Use dynamic imports
+    - [ ] Remove unused dependencies
+  </Step>
+
+  <Step title="Network Optimization">
+    - [ ] Enable HTTP/2
+    - [ ] Configure compression
+    - [ ] Add resource hints
+    - [ ] Set proper cache headers
+  </Step>
+
+  <Step title="Measure and Monitor">
+    - [ ] Set up Web Vitals tracking
+    - [ ] Run Lighthouse audits
+    - [ ] Profile with React DevTools
+    - [ ] Monitor production performance
+  </Step>
+</Steps>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Vite Performance" href="https://vitejs.dev/guide/performance.html" icon="zap">
+    Official Vite performance guide
+  </Card>
+
+  <Card title="React Performance" href="https://react.dev/learn/render-and-commit" icon="react">
+    React documentation on rendering and performance
+  </Card>
+
+  <Card title="TanStack Query Performance" href="https://tanstack.com/query/latest/docs/react/guides/performance" icon="database">
+    Query optimization best practices
+  </Card>
+
+  <Card title="Web Vitals" href="https://web.dev/vitals/" icon="gauge">
+    Google's Web Vitals documentation
+  </Card>
+</CardGroup>

@@ -1,0 +1,336 @@
+---
+title: Sidebar
+description: Flexible sidebar component with multiple variants and collapsible modes
+icon: sidebar
+---
+
+The sidebar is a core navigation component in Shadcn Admin, built with shadcn/ui's Sidebar primitive. It provides a flexible and customizable navigation experience with support for teams, nested navigation, and multiple visual variants.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Multiple Variants" icon="palette">
+    Choose from sidebar, floating, or inset layouts
+  </Card>
+  <Card title="Collapsible Modes" icon="arrows-minimize">
+    Support for icon, offcanvas, and none modes
+  </Card>
+  <Card title="Team Switcher" icon="users">
+    Built-in team/workspace switching capability
+  </Card>
+  <Card title="Nested Navigation" icon="sitemap">
+    Multi-level navigation with collapsible groups
+  </Card>
+</CardGroup>
+
+## Basic Implementation
+
+The `AppSidebar` component is the main sidebar implementation:
+
+```tsx src/components/layout/app-sidebar.tsx
+import { useLayout } from '@/context/layout-provider'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from '@/components/ui/sidebar'
+import { sidebarData } from './data/sidebar-data'
+import { NavGroup } from './nav-group'
+import { NavUser } from './nav-user'
+import { TeamSwitcher } from './team-switcher'
+
+export function AppSidebar() {
+  const { collapsible, variant } = useLayout()
+  return (
+    <Sidebar collapsible={collapsible} variant={variant}>
+      <SidebarHeader>
+        <TeamSwitcher teams={sidebarData.teams} />
+      </SidebarHeader>
+      <SidebarContent>
+        {sidebarData.navGroups.map((props) => (
+          <NavGroup key={props.title} {...props} />
+        ))}
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={sidebarData.user} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}
+```
+
+## Sidebar Data Configuration
+
+Define your navigation structure using the `sidebarData` object:
+
+```ts src/components/layout/data/sidebar-data.ts
+import { LayoutDashboard, ListTodo, Users } from 'lucide-react'
+import { type SidebarData } from '../types'
+
+export const sidebarData: SidebarData = {
+  user: {
+    name: 'satnaing',
+    email: 'satnaingdev@gmail.com',
+    avatar: '/avatars/shadcn.jpg',
+  },
+  teams: [
+    {
+      name: 'Shadcn Admin',
+      logo: Command,
+      plan: 'Vite + ShadcnUI',
+    },
+  ],
+  navGroups: [
+    {
+      title: 'General',
+      items: [
+        {
+          title: 'Dashboard',
+          url: '/',
+          icon: LayoutDashboard,
+        },
+        {
+          title: 'Tasks',
+          url: '/tasks',
+          icon: ListTodo,
+        },
+        {
+          title: 'Users',
+          url: '/users',
+          icon: Users,
+        },
+      ],
+    },
+  ],
+}
+```
+
+## Navigation Structure
+
+### Simple Links
+
+Basic navigation items with a URL:
+
+```ts
+{
+  title: 'Dashboard',
+  url: '/',
+  icon: LayoutDashboard,
+}
+```
+
+### Nested Navigation
+
+Create collapsible navigation groups:
+
+```ts
+{
+  title: 'Settings',
+  icon: Settings,
+  items: [
+    {
+      title: 'Profile',
+      url: '/settings',
+      icon: UserCog,
+    },
+    {
+      title: 'Account',
+      url: '/settings/account',
+      icon: Wrench,
+    },
+  ],
+}
+```
+
+### Badges
+
+Add notification badges to navigation items:
+
+```ts
+{
+  title: 'Chats',
+  url: '/chats',
+  badge: '3',
+  icon: MessagesSquare,
+}
+```
+
+## Sidebar Variants
+
+The sidebar supports three visual variants that can be changed dynamically:
+
+### Sidebar (Default)
+
+Standard sidebar layout that sits alongside the main content.
+
+```tsx
+const { setVariant } = useLayout()
+setVariant('sidebar')
+```
+
+### Floating
+
+Floating sidebar that appears over the content with an elevated style.
+
+```tsx
+setVariant('floating')
+```
+
+### Inset
+
+Inset sidebar with padding and rounded corners, integrated into the layout.
+
+```tsx
+setVariant('inset')
+```
+
+## Collapsible Modes
+
+### Icon Mode
+
+Collapses to show only icons (default):
+
+```tsx
+const { setCollapsible } = useLayout()
+setCollapsible('icon')
+```
+
+### Offcanvas Mode
+
+Slides in/out on mobile, hidden on desktop:
+
+```tsx
+setCollapsible('offcanvas')
+```
+
+### None Mode
+
+Always expanded, no collapse functionality:
+
+```tsx
+setCollapsible('none')
+```
+
+## Layout Provider
+
+The sidebar integrates with the `LayoutProvider` for persistent configuration:
+
+```tsx src/context/layout-provider.tsx
+import { useLayout } from '@/context/layout-provider'
+
+// Get current settings
+const { variant, collapsible } = useLayout()
+
+// Update settings
+const { setVariant, setCollapsible } = useLayout()
+setVariant('floating')
+setCollapsible('icon')
+
+// Reset to defaults
+const { resetLayout } = useLayout()
+resetLayout()
+```
+
+<Note>
+  Sidebar settings are automatically persisted to cookies and will be restored on page reload.
+</Note>
+
+## Navigation Groups
+
+The `NavGroup` component handles rendering of navigation sections:
+
+```tsx
+// Automatically handles:
+// - Simple links
+// - Collapsible nested items
+// - Collapsed state dropdowns
+// - Active state detection
+// - Mobile responsive behavior
+
+<NavGroup
+  title="General"
+  items={[
+    { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+    // ... more items
+  ]}
+/>
+```
+
+## Active State Detection
+
+Navigation items automatically highlight based on:
+
+- Exact URL match
+- URL without query parameters
+- Parent navigation when child is active
+- First segment matching (e.g., `/settings/account` activates `/settings`)
+
+## Mobile Behavior
+
+The sidebar is fully responsive:
+
+- Automatically switches to offcanvas mode on mobile
+- Closes when navigation occurs
+- Touch-friendly interactions
+- Swipe gestures supported
+
+## Customization
+
+### Replace Team Switcher
+
+Use a simple app title instead:
+
+```tsx
+import { AppTitle } from './app-title'
+
+<SidebarHeader>
+  <AppTitle /> {/* Instead of TeamSwitcher */}
+</SidebarHeader>
+```
+
+### Custom Footer
+
+The footer can be customized to show user information or other content:
+
+```tsx
+<SidebarFooter>
+  <NavUser user={sidebarData.user} />
+</SidebarFooter>
+```
+
+## Integration with Router
+
+The sidebar uses `@tanstack/react-router` for navigation:
+
+```tsx
+import { Link, useLocation } from '@tanstack/react-router'
+
+const href = useLocation({ select: (location) => location.href })
+
+<SidebarMenuButton asChild isActive={href === item.url}>
+  <Link to={item.url}>
+    {item.icon && <item.icon />}
+    <span>{item.title}</span>
+  </Link>
+</SidebarMenuButton>
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Organize by User Journey">
+    Group navigation items based on user workflows and common tasks
+  </Step>
+  <Step title="Use Descriptive Icons">
+    Choose icons that clearly represent each section
+  </Step>
+  <Step title="Limit Nesting Depth">
+    Keep navigation hierarchies shallow (maximum 2 levels)
+  </Step>
+  <Step title="Badge Sparingly">
+    Only use badges for important notifications or counts
+  </Step>
+</Steps>

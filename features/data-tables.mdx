@@ -1,0 +1,546 @@
+---
+title: Data Tables
+description: Powerful data tables with sorting, filtering, pagination, and bulk actions
+icon: table
+---
+
+Shadcn Admin includes a comprehensive data table implementation built with TanStack Table (React Table v8). It provides advanced features like sorting, filtering, pagination, column visibility, and bulk actions.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="TanStack Table" icon="table">
+    Built on the industry-standard React Table library
+  </Card>
+  <Card title="Advanced Filtering" icon="filter">
+    Global search and faceted column filters
+  </Card>
+  <Card title="Row Selection" icon="check-square">
+    Multi-row selection with bulk actions
+  </Card>
+  <Card title="URL State Sync" icon="link">
+    Sync table state with URL parameters
+  </Card>
+</CardGroup>
+
+## Basic Table Setup
+
+Here's a complete example from the Tasks feature:
+
+```tsx src/features/tasks/components/tasks-table.tsx
+import {
+  type SortingState,
+  type VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
+import { tasksColumns as columns } from './tasks-columns'
+
+export function TasksTable({ data }: { data: Task[] }) {
+  const [rowSelection, setRowSelection] = useState({})
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+      rowSelection,
+      columnFilters,
+      globalFilter,
+      pagination,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  })
+
+  return (
+    <div className="flex flex-1 flex-col gap-4">
+      <DataTableToolbar
+        table={table}
+        searchPlaceholder="Filter by title or ID..."
+        filters={[
+          {
+            columnId: 'status',
+            title: 'Status',
+            options: statuses,
+          },
+        ]}
+      />
+      
+      <div className="overflow-hidden rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      
+      <DataTablePagination table={table} />
+    </div>
+  )
+}
+```
+
+## Column Definitions
+
+Define your table columns with type safety:
+
+```tsx src/features/tasks/components/tasks-columns.tsx
+import { type ColumnDef } from '@tanstack/react-table'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { DataTableColumnHeader } from '@/components/data-table'
+import { type Task } from '../data/schema'
+
+export const tasksColumns: ColumnDef<Task>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: 'title',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Title" />
+    ),
+    cell: ({ row }) => {
+      const label = labels.find((label) => label.value === row.original.label)
+      return (
+        <div className="flex space-x-2">
+          {label && <Badge variant="outline">{label.label}</Badge>}
+          <span className="truncate font-medium">
+            {row.getValue('title')}
+          </span>
+        </div>
+      )
+    },
+  },
+  {
+    accessorKey: 'status',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
+    cell: ({ row }) => {
+      const status = statuses.find(
+        (status) => status.value === row.getValue('status')
+      )
+      return (
+        <div className="flex items-center gap-2">
+          {status.icon && <status.icon className="size-4" />}
+          <span>{status.label}</span>
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
+  },
+]
+```
+
+## Sortable Column Headers
+
+The `DataTableColumnHeader` component provides sorting UI:
+
+```tsx src/components/data-table/column-header.tsx
+import { ArrowDownIcon, ArrowUpIcon, CaretSortIcon } from '@radix-ui/react-icons'
+import { type Column } from '@tanstack/react-table'
+import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+
+export function DataTableColumnHeader<TData, TValue>({
+  column,
+  title,
+}: {
+  column: Column<TData, TValue>
+  title: string
+}) {
+  if (!column.getCanSort()) {
+    return <div>{title}</div>
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <span>{title}</span>
+          {column.getIsSorted() === 'desc' ? (
+            <ArrowDownIcon className="ms-2 h-4 w-4" />
+          ) : column.getIsSorted() === 'asc' ? (
+            <ArrowUpIcon className="ms-2 h-4 w-4" />
+          ) : (
+            <CaretSortIcon className="ms-2 h-4 w-4" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
+          <ArrowUpIcon /> Asc
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
+          <ArrowDownIcon /> Desc
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
+          Hide
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+```
+
+## Toolbar with Filters
+
+The toolbar provides search and faceted filters:
+
+```tsx src/components/data-table/toolbar.tsx
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { DataTableFacetedFilter } from './faceted-filter'
+import { DataTableViewOptions } from './view-options'
+
+export function DataTableToolbar<TData>({
+  table,
+  searchPlaceholder = 'Filter...',
+  filters = [],
+}: DataTableToolbarProps<TData>) {
+  const isFiltered = table.getState().columnFilters.length > 0 || table.getState().globalFilter
+
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex flex-1 items-center space-x-2">
+        <Input
+          placeholder={searchPlaceholder}
+          value={table.getState().globalFilter ?? ''}
+          onChange={(event) => table.setGlobalFilter(event.target.value)}
+          className="h-8 w-[150px] lg:w-[250px]"
+        />
+        
+        {filters.map((filter) => {
+          const column = table.getColumn(filter.columnId)
+          if (!column) return null
+          return (
+            <DataTableFacetedFilter
+              key={filter.columnId}
+              column={column}
+              title={filter.title}
+              options={filter.options}
+            />
+          )
+        })}
+        
+        {isFiltered && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              table.resetColumnFilters()
+              table.setGlobalFilter('')
+            }}
+          >
+            Reset
+          </Button>
+        )}
+      </div>
+      
+      <DataTableViewOptions table={table} />
+    </div>
+  )
+}
+```
+
+## Faceted Filters
+
+Multi-select filters with count badges:
+
+```tsx
+<DataTableFacetedFilter
+  column={table.getColumn('status')}
+  title="Status"
+  options={[
+    { label: 'Todo', value: 'todo', icon: Circle },
+    { label: 'In Progress', value: 'in-progress', icon: Clock },
+    { label: 'Done', value: 'done', icon: CheckCircle },
+  ]}
+/>
+```
+
+## Pagination
+
+Advanced pagination with page number buttons:
+
+```tsx src/components/data-table/pagination.tsx
+export function DataTablePagination<TData>({
+  table,
+}: {
+  table: Table<TData>
+}) {
+  const currentPage = table.getState().pagination.pageIndex + 1
+  const totalPages = table.getPageCount()
+  const pageNumbers = getPageNumbers(currentPage, totalPages)
+
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Select
+          value={`${table.getState().pagination.pageSize}`}
+          onValueChange={(value) => table.setPageSize(Number(value))}
+        >
+          <SelectTrigger className="h-8 w-[70px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[10, 20, 30, 40, 50].map((pageSize) => (
+              <SelectItem key={pageSize} value={`${pageSize}`}>
+                {pageSize}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-sm font-medium">Rows per page</p>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        
+        {pageNumbers.map((pageNumber, index) => (
+          pageNumber === '...' ? (
+            <span key={index}>...</span>
+          ) : (
+            <Button
+              key={index}
+              variant={currentPage === pageNumber ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => table.setPageIndex(pageNumber - 1)}
+            >
+              {pageNumber}
+            </Button>
+          )
+        ))}
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  )
+}
+```
+
+## Bulk Actions
+
+Perform actions on multiple selected rows:
+
+```tsx src/features/tasks/components/data-table-bulk-actions.tsx
+import { Trash2, Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
+
+export function DataTableBulkActions({ table }) {
+  const selectedRows = table.getFilteredSelectedRowModel().rows
+
+  const handleBulkDelete = () => {
+    const selectedTasks = selectedRows.map((row) => row.original)
+    // Delete logic
+    toast.success(`Deleted ${selectedTasks.length} tasks`)
+    table.resetRowSelection()
+  }
+
+  const handleBulkExport = () => {
+    const selectedTasks = selectedRows.map((row) => row.original)
+    // Export logic
+    toast.success(`Exported ${selectedTasks.length} tasks`)
+  }
+
+  return (
+    <BulkActionsToolbar table={table} entityName="task">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={handleBulkExport}
+      >
+        <Download />
+      </Button>
+      
+      <Button
+        variant="destructive"
+        size="icon"
+        onClick={handleBulkDelete}
+      >
+        <Trash2 />
+      </Button>
+    </BulkActionsToolbar>
+  )
+}
+```
+
+## URL State Synchronization
+
+Sync table state with URL parameters:
+
+```tsx
+import { useTableUrlState } from '@/hooks/use-table-url-state'
+
+const {
+  globalFilter,
+  onGlobalFilterChange,
+  columnFilters,
+  onColumnFiltersChange,
+  pagination,
+  onPaginationChange,
+} = useTableUrlState({
+  search: route.useSearch(),
+  navigate: route.useNavigate(),
+  pagination: { defaultPage: 1, defaultPageSize: 10 },
+  globalFilter: { enabled: true, key: 'filter' },
+  columnFilters: [
+    { columnId: 'status', searchKey: 'status', type: 'array' },
+    { columnId: 'priority', searchKey: 'priority', type: 'array' },
+  ],
+})
+```
+
+## Custom Filter Functions
+
+Define custom filter logic for columns:
+
+```tsx
+{
+  accessorKey: 'status',
+  filterFn: (row, id, value) => {
+    // Custom filter logic
+    return value.includes(row.getValue(id))
+  },
+}
+
+// Global filter function
+globalFilterFn: (row, _columnId, filterValue) => {
+  const id = String(row.getValue('id')).toLowerCase()
+  const title = String(row.getValue('title')).toLowerCase()
+  const searchValue = String(filterValue).toLowerCase()
+  
+  return id.includes(searchValue) || title.includes(searchValue)
+}
+```
+
+## Column Visibility
+
+Toggle column visibility:
+
+```tsx
+import { DataTableViewOptions } from '@/components/data-table'
+
+<DataTableViewOptions table={table} />
+```
+
+## Row Actions
+
+Add action menus to each row:
+
+```tsx
+{
+  id: 'actions',
+  cell: ({ row }) => <DataTableRowActions row={row} />,
+}
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Enable Row Selection for Bulk Actions">
+    Use `enableRowSelection: true` when you need bulk operations
+  </Step>
+  <Step title="Optimize with Memoization">
+    Memoize column definitions to prevent unnecessary re-renders
+  </Step>
+  <Step title="Use Custom Filter Functions">
+    Implement custom filterFn for complex filtering logic
+  </Step>
+  <Step title="Sync State with URL">
+    Enable URL state sync for shareable filtered views
+  </Step>
+  <Step title="Handle Empty States">
+    Always show helpful messages when no results are found
+  </Step>
+</Steps>
+
+<Note>
+  The data table is fully responsive and uses container queries for adaptive layouts.
+</Note>

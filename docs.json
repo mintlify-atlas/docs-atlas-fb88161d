@@ -1,122 +1,144 @@
 {
   "$schema": "https://mintlify.com/docs.json",
+  "name": "Shadcn Admin",
   "theme": "mint",
-  "name": "Mint Starter Kit",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#040404",
+    "light": "#040404",
+    "dark": "#040404"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/satnaing/shadcn-admin"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/satnaing/shadcn-admin"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/project-structure",
+              "concepts/routing",
+              "concepts/theming",
+              "concepts/rtl-support"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/sidebar",
+              "features/layouts",
+              "features/data-tables",
+              "features/authentication",
+              "features/global-search",
+              "features/dark-mode"
             ]
           },
           {
             "group": "Customization",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "customization/layout-options",
+              "customization/theme-configuration",
+              "customization/adding-pages",
+              "customization/custom-components"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Pages",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "pages/dashboard",
+              "pages/tasks",
+              "pages/users",
+              "pages/chats",
+              "pages/apps",
+              "pages/settings",
+              "pages/error-pages"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Components",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
             "pages": [
-              "api-reference/introduction"
+              "components/overview"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Layout Components",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "components/app-sidebar",
+              "components/header",
+              "components/main-layout"
+            ]
+          },
+          {
+            "group": "Custom Components",
+            "pages": [
+              "components/command-menu",
+              "components/config-drawer",
+              "components/data-table",
+              "components/date-picker",
+              "components/password-input",
+              "components/theme-switch"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "components/ui-components"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Development",
+            "pages": [
+              "guides/local-development",
+              "guides/building-production",
+              "guides/deploying"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "guides/clerk-integration",
+              "guides/api-integration",
+              "guides/state-management"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "guides/rtl-implementation",
+              "guides/updating-components",
+              "guides/performance-optimization"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

@@ -1,0 +1,102 @@
+---
+title: Components Overview
+description: Explore the comprehensive component library in Shadcn Admin, including layout components, custom components, and UI primitives.
+---
+
+Shadcn Admin provides a complete component library built on top of [Shadcn UI](https://ui.shadcn.com/), organized into three main categories: layout components, custom components, and UI primitives.
+
+## Component Categories
+
+<CardGroup cols={3}>
+  <Card title="Layout Components" icon="layout-grid" href="/components/app-sidebar">
+    Core structural components including sidebar, header, and main layout containers.
+  </Card>
+  <Card title="Custom Components" icon="puzzle-piece" href="/components/command-menu">
+    Pre-built functional components like command menu, data tables, and config drawer.
+  </Card>
+  <Card title="UI Primitives" icon="cube" href="/components/ui-components">
+    30+ Shadcn UI components with RTL support and custom styling.
+  </Card>
+</CardGroup>
+
+## Layout Components
+
+Layout components form the structural foundation of your admin dashboard:
+
+- **[App Sidebar](/components/app-sidebar)** - Collapsible navigation sidebar with team switcher and navigation groups
+- **[Header](/components/header)** - Sticky header with blur effect on scroll
+- **[Main Layout](/components/main-layout)** - Main content container with fixed and fluid layout options
+
+## Custom Components
+
+Purpose-built components that provide common admin dashboard functionality:
+
+<CardGroup cols={2}>
+  <Card title="Command Menu" href="/components/command-menu">
+    Global search and navigation with keyboard shortcuts (Cmd/Ctrl+K)
+  </Card>
+  <Card title="Config Drawer" href="/components/config-drawer">
+    Live theme customization with theme, sidebar, layout, and direction settings
+  </Card>
+  <Card title="Data Table" href="/components/data-table">
+    Full-featured tables with sorting, filtering, pagination, and bulk actions
+  </Card>
+  <Card title="Date Picker" href="/components/date-picker">
+    Calendar-based date selection with date validation
+  </Card>
+  <Card title="Password Input" href="/components/password-input">
+    Secure password field with visibility toggle
+  </Card>
+  <Card title="Theme Switch" href="/components/theme-switch">
+    Light/dark/system theme selector with meta tag updates
+  </Card>
+</CardGroup>
+
+## UI Components
+
+Shadcn Admin includes all 30+ Shadcn UI components with:
+
+- **RTL Support** - Fully tested right-to-left layout support
+- **New York Style** - Consistent design system
+- **Customized Components** - Enhanced for admin use cases
+- **Type Safety** - Full TypeScript support
+
+View the complete [UI Components](/components/ui-components) documentation.
+
+## Integration with Shadcn UI
+
+All components are built using the Shadcn UI CLI configuration:
+
+```json components.json
+{
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "baseColor": "slate",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide"
+}
+```
+
+## Importing Components
+
+Components use path aliases for clean imports:
+
+```tsx
+import { AppSidebar } from '@/components/layout/app-sidebar'
+import { CommandMenu } from '@/components/command-menu'
+import { Button } from '@/components/ui/button'
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Layout Components" icon="layout-grid" href="/components/app-sidebar">
+    Start building with layout components
+  </Card>
+  <Card title="Customization" icon="palette" href="/customization/theme-configuration">
+    Learn how to customize components
+  </Card>
+</CardGroup>

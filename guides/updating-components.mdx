@@ -1,0 +1,463 @@
+---
+title: Updating Components
+description: Safely update Shadcn UI components while preserving customizations and RTL support
+---
+
+## Overview
+
+Shadcn Admin uses [Shadcn UI](https://ui.shadcn.com) components, but many have been customized for better RTL support, accessibility, and specific design requirements. This guide explains which components can be safely updated and how to preserve customizations.
+
+<Warning>
+  Not all components can be safely updated using the Shadcn CLI without losing customizations. Always review the lists below before updating.
+</Warning>
+
+## Using the Shadcn CLI
+
+Shadcn UI provides a CLI for adding and updating components:
+
+```bash
+npx shadcn@latest add <component>
+```
+
+This command will:
+1. Download the latest component code
+2. Place it in `src/components/ui/`
+3. **Overwrite existing files** if they already exist
+
+<Note>
+  The CLI will prompt you before overwriting. Pay attention to these prompts, especially for customized components.
+</Note>
+
+## Component Categories
+
+### Standard Components (Safe to Update)
+
+These components are standard Shadcn UI implementations and can be safely updated:
+
+- accordion
+- aspect-ratio
+- avatar
+- badge
+- breadcrumb
+- button
+- card
+- chart
+- checkbox
+- collapsible
+- context-menu
+- form
+- hover-card
+- input
+- label
+- menubar
+- navigation-menu
+- pagination
+- popover
+- progress
+- radio-group
+- resizable
+- scroll-area (with caution - see Modified Components)
+- skeleton
+- slider
+- tabs
+- textarea
+- toast
+- toggle
+- toggle-group
+- tooltip
+
+**To update these:**
+
+```bash
+npx shadcn@latest add button
+# Confirm overwrite when prompted
+```
+
+### Modified Components (Update with Caution)
+
+These components have general customizations beyond RTL support:
+
+#### scroll-area
+
+**Customizations:**
+- Enhanced scrollbar styling
+- Custom thumb appearance
+- Improved mobile support
+
+**To update:**
+1. Save a copy of the current file
+2. Run `npx shadcn@latest add scroll-area`
+3. Manually merge your customizations back in
+
+#### sonner
+
+**Customizations:**
+- Positioned for RTL support
+- Custom theming integration
+- Enhanced toast styling
+
+**To update:**
+1. Check current implementation
+2. Update with CLI
+3. Verify positioning in both LTR and RTL modes
+
+#### separator
+
+**Customizations:**
+- Spacing adjustments
+- RTL-aware margins
+
+**To update:**
+Compare changes carefully before accepting.
+
+### RTL Updated Components (Safe if Not Using RTL)
+
+These components have specific changes for RTL language support. If you don't need RTL support, they can be safely updated.
+
+<Tabs>
+  <Tab title="RTL Components">
+    - alert-dialog
+    - calendar
+    - command
+    - dialog
+    - dropdown-menu
+    - select
+    - table
+    - sheet
+    - sidebar
+    - switch
+  </Tab>
+
+  <Tab title="RTL Customizations">
+    Common RTL modifications include:
+    
+    - Using logical properties (`start`/`end` instead of `left`/`right`)
+    - Flipping animations and transitions
+    - Adjusting positioning for RTL layouts
+    - Icon rotation utilities
+  </Tab>
+</Tabs>
+
+<Warning>
+  If you're using RTL support, **do not** update these components via CLI without manually preserving RTL modifications.
+</Warning>
+
+## How to Safely Update Components
+
+### Method 1: Manual Comparison
+
+<Steps>
+  <Step title="Backup Current Component">
+    ```bash
+    cp src/components/ui/dialog.tsx src/components/ui/dialog.tsx.backup
+    ```
+  </Step>
+
+  <Step title="Update with CLI">
+    ```bash
+    npx shadcn@latest add dialog
+    ```
+    
+    Confirm overwrite when prompted.
+  </Step>
+
+  <Step title="Compare Changes">
+    Use a diff tool to compare:
+    
+    ```bash
+    # Using git
+    git diff src/components/ui/dialog.tsx
+    
+    # Or use a GUI diff tool
+    code --diff src/components/ui/dialog.tsx.backup src/components/ui/dialog.tsx
+    ```
+  </Step>
+
+  <Step title="Merge Customizations">
+    Manually merge your customizations back into the updated component.
+  </Step>
+
+  <Step title="Test Thoroughly">
+    - Test in both LTR and RTL modes
+    - Check all variants and states
+    - Verify accessibility features
+  </Step>
+</Steps>
+
+### Method 2: Temporary Directory
+
+<Steps>
+  <Step title="Create Temporary Project">
+    ```bash
+    mkdir temp-shadcn
+    cd temp-shadcn
+    npm create vite@latest . -- --template react-ts
+    npx shadcn@latest init
+    ```
+  </Step>
+
+  <Step title="Add Component">
+    ```bash
+    npx shadcn@latest add dialog
+    ```
+  </Step>
+
+  <Step title="Compare Files">
+    Open both versions side-by-side and manually merge changes.
+  </Step>
+
+  <Step title="Update Your Project">
+    Copy the merged version to your project.
+  </Step>
+</Steps>
+
+### Method 3: Git Branch Strategy
+
+<Steps>
+  <Step title="Create Update Branch">
+    ```bash
+    git checkout -b update-component-dialog
+    ```
+  </Step>
+
+  <Step title="Update Component">
+    ```bash
+    npx shadcn@latest add dialog
+    ```
+  </Step>
+
+  <Step title="Review Changes">
+    ```bash
+    git diff
+    ```
+    
+    Review all changes carefully.
+  </Step>
+
+  <Step title="Restore Customizations">
+    Use `git checkout` to restore specific lines if needed:
+    
+    ```bash
+    git checkout HEAD -- src/components/ui/dialog.tsx
+    # Then manually apply upstream changes
+    ```
+  </Step>
+
+  <Step title="Test and Merge">
+    After testing, merge the branch:
+    
+    ```bash
+    git checkout main
+    git merge update-component-dialog
+    ```
+  </Step>
+</Steps>
+
+## Identifying Customizations
+
+Look for these patterns in components that indicate customizations:
+
+### RTL Support Indicators
+
+```tsx
+// Logical properties instead of physical
+className="ms-4 me-2"  // instead of ml-4 mr-2
+className="ps-4 pe-2"  // instead of pl-4 pr-2
+className="start-0"    // instead of left-0
+className="end-0"      // instead of right-0
+
+// RTL-aware borders
+className="border-s"   // instead of border-l
+className="border-e"   // instead of border-r
+
+// Icon rotation for RTL
+className="rtl:rotate-180"
+
+// Text alignment
+className="text-start" // instead of text-left
+className="text-end"   // instead of text-right
+```
+
+### Custom Styling
+
+```tsx
+// Custom color variables
+className="bg-sidebar text-sidebar-foreground"
+
+// Custom size variants
+const variants = cva("base-class", {
+  variants: {
+    size: {
+      custom: "custom-styles",
+    },
+  },
+})
+
+// Additional props
+interface CustomProps extends ComponentProps {
+  customProp?: string
+}
+```
+
+### Enhanced Accessibility
+
+```tsx
+// Additional ARIA attributes
+aria-labelledby={labelId}
+aria-describedby={descriptionId}
+
+// Keyboard navigation
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Custom keyboard handling
+  }
+}, [])
+```
+
+## Testing Updated Components
+
+### Checklist
+
+<Steps>
+  <Step title="Visual Testing">
+    - [ ] Component renders correctly
+    - [ ] All variants work (size, color, etc.)
+    - [ ] Responsive behavior is intact
+    - [ ] Dark/light themes both work
+  </Step>
+
+  <Step title="RTL Testing">
+    - [ ] Toggle RTL mode
+    - [ ] Verify layout flips correctly
+    - [ ] Check icon directions
+    - [ ] Test interactive elements
+  </Step>
+
+  <Step title="Accessibility Testing">
+    - [ ] Keyboard navigation works
+    - [ ] Screen reader announces correctly
+    - [ ] Focus states are visible
+    - [ ] ARIA attributes are present
+  </Step>
+
+  <Step title="Integration Testing">
+    - [ ] Component works in all contexts
+    - [ ] No console errors
+    - [ ] TypeScript types are correct
+    - [ ] No breaking changes in API
+  </Step>
+</Steps>
+
+### Browser Testing
+
+Test in multiple browsers:
+
+- Chrome/Edge (Chromium)
+- Firefox
+- Safari (if on macOS)
+- Mobile browsers (iOS Safari, Chrome Android)
+
+## Component Update Log
+
+Maintain a log of component updates:
+
+```md COMPONENT_UPDATES.md
+# Component Update Log
+
+## 2026-03-14
+
+### Updated: button
+- Version: Latest from Shadcn UI
+- Changes: None (standard component)
+- Tested: ✅ LTR, ✅ RTL, ✅ Dark mode
+
+### Updated: dialog (with merge)
+- Version: Latest from Shadcn UI  
+- Changes: Preserved RTL customizations
+- Custom modifications:
+  - Logical properties for positioning
+  - RTL-aware close button placement
+- Tested: ✅ LTR, ✅ RTL, ✅ Dark mode
+
+### Skipped: sidebar
+- Reason: Heavily customized, needs major refactor
+- Action: Postponed to v2.3.0
+```
+
+## When NOT to Update
+
+Skip updating if:
+
+1. **Heavy customizations** - Component has significant custom logic
+2. **No upstream improvements** - No meaningful changes in the latest version
+3. **Breaking changes** - Update would require extensive refactoring
+4. **Time constraints** - Not enough time to properly test the update
+5. **Stability concerns** - Current version is stable and working well
+
+<Tip>
+  It's better to stay on a working version than to update and introduce bugs. Only update when there's a clear benefit.
+</Tip>
+
+## Adding New Components
+
+When adding a component that doesn't exist yet:
+
+<Steps>
+  <Step title="Add with CLI">
+    ```bash
+    npx shadcn@latest add new-component
+    ```
+  </Step>
+
+  <Step title="Add RTL Support (if needed)">
+    Replace physical properties with logical ones:
+    
+    ```tsx
+    // Before
+    className="ml-4 mr-2 text-left"
+    
+    // After
+    className="ms-4 me-2 text-start"
+    ```
+  </Step>
+
+  <Step title="Test Thoroughly">
+    Test in both LTR and RTL modes before committing.
+  </Step>
+
+  <Step title="Document Customizations">
+    Add to the component update log if you made changes.
+  </Step>
+</Steps>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Shadcn UI Components" href="https://ui.shadcn.com/docs/components" icon="book">
+    Official component documentation and changelog
+  </Card>
+
+  <Card title="RTL Implementation" href="/guides/rtl-implementation" icon="globe">
+    Learn about RTL support in Shadcn Admin
+  </Card>
+
+  <Card title="GitHub Discussions" href="https://github.com/satnaing/shadcn-admin" icon="github">
+    Ask questions about component updates
+  </Card>
+
+  <Card title="Customization" href="/customization/custom-components" icon="palette">
+    Learn about customizing components
+  </Card>
+</CardGroup>
+
+## Summary
+
+<Note>
+  **Quick Reference:**
+  
+  - ✅ **Standard components**: Safe to update anytime
+  - ⚠️ **Modified components**: Update with caution, merge carefully
+  - 🌍 **RTL components**: Only update if you don't need RTL, or merge manually
+  - 📝 **Always test**: Both LTR and RTL modes after updating
+  - 💾 **Keep backups**: Before updating any component
+</Note>

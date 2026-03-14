@@ -1,0 +1,467 @@
+---
+title: Routing
+description: File-based routing with TanStack Router for type-safe navigation
+icon: route
+---
+
+Shadcn Admin uses [TanStack Router](https://tanstack.com/router) for powerful, type-safe routing with automatic code generation and file-based route organization.
+
+## Overview
+
+TanStack Router provides:
+
+<CardGroup cols={2}>
+  <Card title="Type Safety" icon="shield-check">
+    Fully type-safe routes, params, and search parameters with TypeScript
+  </Card>
+  
+  <Card title="File-Based Routing" icon="folder">
+    Automatic route tree generation from file structure
+  </Card>
+  
+  <Card title="Code Splitting" icon="scissors">
+    Automatic route-based code splitting for optimal performance
+  </Card>
+  
+  <Card title="Preloading" icon="download">
+    Smart route preloading on hover for instant navigation
+  </Card>
+</CardGroup>
+
+## Router Setup
+
+The router is configured in `src/main.tsx` with React Query integration:
+
+```tsx src/main.tsx
+import { createRouter, RouterProvider } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
+
+// Create router instance with configuration
+const router = createRouter({
+  routeTree,                      // Auto-generated route tree
+  context: { queryClient },       // Share QueryClient with routes
+  defaultPreload: 'intent',       // Preload on hover
+  defaultPreloadStaleTime: 0,     // Always preload fresh data
+})
+
+// Type registration for inference
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
+```
+
+<Note>
+The route tree is automatically generated in `src/routeTree.gen.ts` based on your file structure. Never edit this file manually.
+</Note>
+
+## Route Structure
+
+Routes are organized in the `src/routes/` directory using special naming conventions:
+
+```bash Route Directory Structure
+src/routes/
+├── __root.tsx                    # Root layout for all routes
+├── _authenticated/               # Protected route group (layout)
+│   ├── route.tsx                # Authenticated layout component
+│   ├── index.tsx                # Dashboard (/) page
+│   ├── users/
+│   │   └── index.tsx            # /users page
+│   ├── tasks/
+│   │   └── index.tsx            # /tasks page
+│   ├── chats/
+│   │   └── index.tsx            # /chats page
+│   ├── apps/
+│   │   └── index.tsx            # /apps page
+│   ├── settings/
+│   │   ├── account.tsx          # /settings/account
+│   │   ├── appearance.tsx       # /settings/appearance
+│   │   └── display.tsx          # /settings/display
+│   └── errors/
+│       └── $error.tsx           # Dynamic /errors/:error route
+├── (auth)/                       # Route group (no layout)
+│   ├── sign-in.tsx              # /sign-in page
+│   ├── sign-in-2.tsx            # /sign-in-2 page
+│   ├── sign-up.tsx              # /sign-up page
+│   ├── forgot-password.tsx      # /forgot-password page
+│   └── otp.tsx                  # /otp page
+└── (errors)/                     # Error pages group
+    ├── 401.tsx                  # /401 unauthorized
+    ├── 403.tsx                  # /403 forbidden
+    ├── 404.tsx                  # /404 not found
+    ├── 500.tsx                  # /500 server error
+    └── 503.tsx                  # /503 service unavailable
+```
+
+## Naming Conventions
+
+TanStack Router uses special file naming patterns:
+
+<Steps>
+  <Step title="__root.tsx">
+    Double underscores define the root layout that wraps all routes.
+  </Step>
+  
+  <Step title="_authenticated/">
+    Underscore prefix creates a layout route (pathless parent).
+  </Step>
+  
+  <Step title="(auth)/">
+    Parentheses create a route group without affecting the URL path.
+  </Step>
+  
+  <Step title="$param.tsx">
+    Dollar sign creates a dynamic route parameter.
+  </Step>
+  
+  <Step title="index.tsx">
+    Index files represent the default route for that path segment.
+  </Step>
+</Steps>
+
+## Root Layout
+
+The `__root.tsx` file defines the application shell:
+
+```tsx src/routes/__root.tsx
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
+import { QueryClient } from '@tanstack/react-query'
+import { Toaster } from '@/components/ui/sonner'
+import { NavigationProgress } from '@/components/navigation-progress'
+import { GeneralError } from '@/features/errors/general-error'
+import { NotFoundError } from '@/features/errors/not-found-error'
+
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient
+}>()({
+  component: () => (
+    <>
+      <NavigationProgress />
+      <Outlet />  {/* Child routes render here */}
+      <Toaster duration={5000} />
+    </>
+  ),
+  notFoundComponent: NotFoundError,
+  errorComponent: GeneralError,
+})
+```
+
+<Accordion title="Key Features">
+- **Context Typing**: Types shared context (QueryClient) for all routes
+- **Outlet**: Renders child route components
+- **Error Boundaries**: Custom error and 404 components
+- **Global UI**: Navigation progress and toast notifications
+</Accordion>
+
+## Authenticated Routes
+
+The `_authenticated` layout protects routes requiring authentication:
+
+```tsx src/routes/_authenticated/route.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+
+export const Route = createFileRoute('/_authenticated')({
+  component: AuthenticatedLayout,
+})
+```
+
+This layout wraps all child routes with:
+- Sidebar navigation
+- Header with breadcrumbs
+- Search functionality
+- Layout configuration
+
+### Creating Protected Pages
+
+```tsx src/routes/_authenticated/users/index.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { Users } from '@/features/users'
+
+export const Route = createFileRoute('/_authenticated/users/')({
+  component: Users,
+})
+```
+
+<Note>
+All routes under `_authenticated/` automatically include the sidebar and authentication checks.
+</Note>
+
+## Public Routes
+
+Authentication pages use route groups to avoid layout nesting:
+
+```tsx src/routes/(auth)/sign-in.tsx
+import { z } from 'zod'
+import { createFileRoute } from '@tanstack/react-router'
+import { SignIn } from '@/features/auth/sign-in'
+
+const searchSchema = z.object({
+  redirect: z.string().optional(),
+})
+
+export const Route = createFileRoute('/(auth)/sign-in')({
+  component: SignIn,
+  validateSearch: searchSchema,  // Type-safe search params
+})
+```
+
+### Search Parameter Validation
+
+TanStack Router validates search parameters with Zod schemas:
+
+```tsx Example: Typed Search Parameters
+const searchSchema = z.object({
+  redirect: z.string().optional(),
+  page: z.number().int().positive().optional().default(1),
+  sort: z.enum(['asc', 'desc']).optional(),
+})
+
+export const Route = createFileRoute('/users')({
+  validateSearch: searchSchema,
+})
+
+// Access in component with full type safety
+function Users() {
+  const { redirect, page, sort } = Route.useSearch()
+  // TypeScript knows the exact types!
+}
+```
+
+## Dynamic Routes
+
+Dynamic parameters use the `$` prefix:
+
+```tsx src/routes/_authenticated/errors/$error.tsx
+import { createFileRoute } from '@tanstack/react-router'
+
+export const Route = createFileRoute('/_authenticated/errors/$error')({
+  component: ErrorPage,
+})
+
+function ErrorPage() {
+  const { error } = Route.useParams()  // Type-safe params
+  return <div>Error: {error}</div>
+}
+```
+
+<CodeGroup>
+```tsx URL: /errors/404
+// Params: { error: "404" }
+```
+
+```tsx URL: /errors/500
+// Params: { error: "500" }
+```
+</CodeGroup>
+
+## Navigation
+
+### Using Link Component
+
+```tsx Type-Safe Navigation
+import { Link } from '@tanstack/react-router'
+
+function Navigation() {
+  return (
+    <nav>
+      {/* Basic link */}
+      <Link to="/users">Users</Link>
+      
+      {/* Link with params */}
+      <Link 
+        to="/errors/$error" 
+        params={{ error: '404' }}
+      >
+        Error Page
+      </Link>
+      
+      {/* Link with search params */}
+      <Link 
+        to="/sign-in" 
+        search={{ redirect: '/dashboard' }}
+      >
+        Sign In
+      </Link>
+      
+      {/* Active link styling */}
+      <Link 
+        to="/users"
+        activeProps={{ className: 'font-bold' }}
+      >
+        Users
+      </Link>
+    </nav>
+  )
+}
+```
+
+### Programmatic Navigation
+
+```tsx Using useNavigate Hook
+import { useNavigate } from '@tanstack/react-router'
+
+function MyComponent() {
+  const navigate = useNavigate()
+  
+  const handleSubmit = async () => {
+    // Navigate to users page
+    await navigate({ to: '/users' })
+    
+    // Navigate with search params
+    await navigate({ 
+      to: '/sign-in',
+      search: { redirect: '/dashboard' }
+    })
+    
+    // Navigate with params
+    await navigate({ 
+      to: '/errors/$error',
+      params: { error: '500' }
+    })
+  }
+}
+```
+
+## Route Loading States
+
+TanStack Router provides built-in loading indicators:
+
+```tsx src/components/navigation-progress.tsx
+import { useNavigation } from '@tanstack/react-router'
+
+export function NavigationProgress() {
+  const navigation = useNavigation()
+  
+  return navigation.status === 'pending' ? (
+    <div className="fixed top-0 left-0 right-0 h-1 bg-primary animate-pulse" />
+  ) : null
+}
+```
+
+## Error Handling
+
+### Route-Level Error Boundaries
+
+```tsx Custom Error Component
+import { ErrorComponentProps } from '@tanstack/react-router'
+
+export function GeneralError({ error }: ErrorComponentProps) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h1 className="text-4xl font-bold">Something went wrong</h1>
+      <p className="text-muted-foreground">{error.message}</p>
+    </div>
+  )
+}
+```
+
+### 404 Not Found
+
+```tsx Custom 404 Component
+export function NotFoundError() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h1 className="text-4xl font-bold">404</h1>
+      <p className="text-muted-foreground">Page not found</p>
+      <Link to="/" className="mt-4">Go Home</Link>
+    </div>
+  )
+}
+```
+
+## Route Preloading
+
+Routes automatically preload on hover for instant navigation:
+
+```tsx src/main.tsx
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',        // Preload on hover/focus
+  defaultPreloadStaleTime: 0,      // Always fetch fresh data
+})
+```
+
+<Tip>
+Preloading makes navigation feel instant by fetching route data before the user clicks.
+</Tip>
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Type-Safe Links">
+    Always use TanStack Router's `Link` component for type-safe navigation:
+    ```tsx
+    <Link to="/users" /> {/* ✓ Type-safe */}
+    <a href="/users" />  {/* ✗ No type safety */}
+    ```
+  </Step>
+  
+  <Step title="Validate Search Parameters">
+    Use Zod schemas to validate and type search parameters:
+    ```tsx
+    const searchSchema = z.object({
+      page: z.number().int().positive(),
+    })
+    ```
+  </Step>
+  
+  <Step title="Co-locate Route Logic">
+    Keep route-specific logic in the route file or feature directory.
+  </Step>
+  
+  <Step title="Use Route Groups">
+    Organize related routes with `(groupName)` without affecting URLs.
+  </Step>
+</Steps>
+
+<Warning>
+Never edit `src/routeTree.gen.ts` manually. It's automatically generated when you run the dev server.
+</Warning>
+
+## Adding New Routes
+
+<Steps>
+  <Step title="Create Route File">
+    Add a new file in `src/routes/` following naming conventions:
+    ```bash
+    src/routes/_authenticated/my-page/index.tsx
+    ```
+  </Step>
+  
+  <Step title="Define Route">
+    Use `createFileRoute` to define the route:
+    ```tsx
+    import { createFileRoute } from '@tanstack/react-router'
+    
+    export const Route = createFileRoute('/_authenticated/my-page/')({
+      component: MyPage,
+    })
+    
+    function MyPage() {
+      return <div>My Page</div>
+    }
+    ```
+  </Step>
+  
+  <Step title="Route Tree Updates">
+    The route tree auto-regenerates when you save the file.
+  </Step>
+  
+  <Step title="Add to Navigation">
+    Update `src/components/layout/data/sidebar-data.ts` to add sidebar links.
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/concepts/project-structure">
+    Learn about the overall project organization
+  </Card>
+  
+  <Card title="TanStack Router Docs" icon="book" href="https://tanstack.com/router">
+    Explore the full TanStack Router documentation
+  </Card>
+</CardGroup>

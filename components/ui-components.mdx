@@ -1,0 +1,436 @@
+---
+title: UI Components
+description: Complete reference for the 30+ Shadcn UI components with RTL support and custom enhancements.
+---
+
+Shadcn Admin includes all Shadcn UI components, enhanced with RTL support and optimized for admin dashboard use cases. All components are built with the "New York" style variant.
+
+## Component Library
+
+The following 30 UI components are available:
+
+<CardGroup cols={3}>
+  <Card title="Alert Dialog" icon="triangle-exclamation" href="https://ui.shadcn.com/docs/components/alert-dialog">
+    Modal dialogs for confirmations
+  </Card>
+  <Card title="Alert" icon="bell" href="https://ui.shadcn.com/docs/components/alert">
+    Callout messages and notifications
+  </Card>
+  <Card title="Avatar" icon="user" href="https://ui.shadcn.com/docs/components/avatar">
+    User profile images with fallbacks
+  </Card>
+  <Card title="Badge" icon="tag" href="https://ui.shadcn.com/docs/components/badge">
+    Small status indicators
+  </Card>
+  <Card title="Button" icon="hand-pointer" href="https://ui.shadcn.com/docs/components/button">
+    Primary interaction element
+  </Card>
+  <Card title="Calendar" icon="calendar" href="https://ui.shadcn.com/docs/components/calendar">
+    Date selection interface
+  </Card>
+  <Card title="Card" icon="square" href="https://ui.shadcn.com/docs/components/card">
+    Content containers
+  </Card>
+  <Card title="Checkbox" icon="square-check" href="https://ui.shadcn.com/docs/components/checkbox">
+    Toggle selection boxes
+  </Card>
+  <Card title="Collapsible" icon="angles-down" href="https://ui.shadcn.com/docs/components/collapsible">
+    Expandable content sections
+  </Card>
+  <Card title="Command" icon="terminal" href="https://ui.shadcn.com/docs/components/command">
+    Command palette primitives
+  </Card>
+  <Card title="Dialog" icon="window-maximize" href="https://ui.shadcn.com/docs/components/dialog">
+    Modal overlays
+  </Card>
+  <Card title="Dropdown Menu" icon="bars" href="https://ui.shadcn.com/docs/components/dropdown-menu">
+    Contextual menus
+  </Card>
+  <Card title="Form" icon="file-lines" href="https://ui.shadcn.com/docs/components/form">
+    Form field wrappers
+  </Card>
+  <Card title="Input OTP" icon="keyboard" href="https://ui.shadcn.com/docs/components/input-otp">
+    One-time password input
+  </Card>
+  <Card title="Input" icon="input-text" href="https://ui.shadcn.com/docs/components/input">
+    Text input fields
+  </Card>
+  <Card title="Label" icon="tag" href="https://ui.shadcn.com/docs/components/label">
+    Form field labels
+  </Card>
+  <Card title="Popover" icon="comment" href="https://ui.shadcn.com/docs/components/popover">
+    Floating content panels
+  </Card>
+  <Card title="Radio Group" icon="circle-dot" href="https://ui.shadcn.com/docs/components/radio-group">
+    Single-selection groups
+  </Card>
+  <Card title="Scroll Area" icon="scroll" href="https://ui.shadcn.com/docs/components/scroll-area">
+    Custom scrollbars
+  </Card>
+  <Card title="Select" icon="caret-down" href="https://ui.shadcn.com/docs/components/select">
+    Dropdown selection
+  </Card>
+  <Card title="Separator" icon="minus" href="https://ui.shadcn.com/docs/components/separator">
+    Visual dividers
+  </Card>
+  <Card title="Sheet" icon="sidebar" href="https://ui.shadcn.com/docs/components/sheet">
+    Slide-in panels
+  </Card>
+  <Card title="Sidebar" icon="sidebar" href="https://ui.shadcn.com/docs/components/sidebar">
+    Navigation sidebar primitives
+  </Card>
+  <Card title="Skeleton" icon="bone" href="https://ui.shadcn.com/docs/components/skeleton">
+    Loading placeholders
+  </Card>
+  <Card title="Sonner" icon="bell" href="https://ui.shadcn.com/docs/components/sonner">
+    Toast notifications
+  </Card>
+  <Card title="Switch" icon="toggle-on" href="https://ui.shadcn.com/docs/components/switch">
+    Toggle switches
+  </Card>
+  <Card title="Table" icon="table" href="https://ui.shadcn.com/docs/components/table">
+    Data table primitives
+  </Card>
+  <Card title="Tabs" icon="folder" href="https://ui.shadcn.com/docs/components/tabs">
+    Tabbed interfaces
+  </Card>
+  <Card title="Textarea" icon="align-left" href="https://ui.shadcn.com/docs/components/textarea">
+    Multi-line text input
+  </Card>
+  <Card title="Tooltip" icon="comment-dots" href="https://ui.shadcn.com/docs/components/tooltip">
+    Contextual hints
+  </Card>
+</CardGroup>
+
+## Configuration
+
+All components are configured via `components.json`:
+
+```json components.json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/index.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "iconLibrary": "lucide"
+}
+```
+
+### Key Settings
+
+<ParamField path="style" type="string" default="new-york">
+  Design system style variant
+</ParamField>
+
+<ParamField path="rsc" type="boolean" default="false">
+  React Server Components support (disabled for Vite)
+</ParamField>
+
+<ParamField path="tsx" type="boolean" default="true">
+  TypeScript support enabled
+</ParamField>
+
+<ParamField path="tailwind.baseColor" type="string" default="slate">
+  Base color palette for the design system
+</ParamField>
+
+<ParamField path="tailwind.cssVariables" type="boolean" default="true">
+  Use CSS variables for theming
+</ParamField>
+
+<ParamField path="iconLibrary" type="string" default="lucide">
+  Icon library (Lucide React)
+</ParamField>
+
+## RTL Enhancements
+
+Key components have been enhanced for RTL (right-to-left) language support:
+
+### Updated Components
+
+<CardGroup cols={2}>
+  <Card title="Sidebar" icon="sidebar">
+    Directional positioning and rail cursor
+  </Card>
+  <Card title="Calendar" icon="calendar">
+    Week layout and navigation direction
+  </Card>
+  <Card title="Dropdown Menu" icon="bars">
+    Submenu positioning and chevrons
+  </Card>
+  <Card title="Popover" icon="comment">
+    Arrow and content alignment
+  </Card>
+</CardGroup>
+
+### Sidebar RTL Support
+
+The sidebar component includes RTL-specific styles:
+
+```tsx src/components/ui/sidebar.tsx
+<SidebarRail
+  className={cn(
+    // RTL support
+    'rtl:translate-x-1/2',
+    'rtl:in-data-[side=left]:cursor-e-resize rtl:in-data-[side=right]:cursor-w-resize',
+    'rtl:[[data-side=left][data-state=collapsed]_&]:cursor-w-resize'
+  )}
+/>
+```
+
+**RTL Features:**
+- Mirrored rail positioning
+- Reversed cursor resize directions
+- Flipped chevron rotations
+
+### Logical Properties
+
+All spacing and positioning uses CSS logical properties:
+
+```tsx
+// Physical properties (old)
+margin-left: 1rem
+padding-right: 2rem
+
+// Logical properties (RTL-compatible)
+margin-inline-start: 1rem  // ms-4
+padding-inline-end: 2rem   // pe-8
+```
+
+**Tailwind logical classes:**
+- `ms-*` - margin-inline-start (left in LTR, right in RTL)
+- `me-*` - margin-inline-end (right in LTR, left in RTL)
+- `ps-*` - padding-inline-start
+- `pe-*` - padding-inline-end
+- `start-*` - inset-inline-start
+- `end-*` - inset-inline-end
+
+## Import Paths
+
+All UI components use the `@/components/ui` alias:
+
+```tsx
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+```
+
+## Customized Components
+
+Several components have admin-specific customizations:
+
+### Button
+
+Includes additional variants and sizes used throughout the dashboard.
+
+### Sidebar
+
+Extensively customized with:
+- Multiple variants (inset, floating, sidebar)
+- Collapsible modes (offcanvas, icon, none)
+- Mobile sheet behavior
+- Keyboard shortcuts
+- Cookie-based persistence
+
+See [App Sidebar](/components/app-sidebar) for implementation details.
+
+### Table
+
+Enhanced for data table use:
+- Container query support
+- Responsive layouts
+- Selection states
+
+See [Data Table](/components/data-table) for the full implementation.
+
+### Calendar
+
+Includes:
+- Dropdown caption layout
+- Date range validation
+- RTL week layout
+
+See [Date Picker](/components/date-picker) for usage.
+
+## Theme Integration
+
+All components support the theme system via CSS variables:
+
+```css src/styles/index.css
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  /* ... more variables */
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  /* ... more variables */
+}
+```
+
+Components automatically adapt to theme changes.
+
+## Adding New Components
+
+Use the Shadcn CLI to add components:
+
+```bash
+npx shadcn@latest add [component-name]
+```
+
+**Example:**
+```bash
+# Add the accordion component
+npx shadcn@latest add accordion
+
+# Add multiple components
+npx shadcn@latest add hover-card menubar
+```
+
+Components are automatically:
+- Added to `src/components/ui/`
+- Configured with project settings
+- Styled with the New York variant
+- Compatible with the existing theme
+
+## Component Variants
+
+Many components include multiple variants:
+
+### Button Variants
+
+```tsx
+<Button variant="default">Default</Button>
+<Button variant="destructive">Destructive</Button>
+<Button variant="outline">Outline</Button>
+<Button variant="secondary">Secondary</Button>
+<Button variant="ghost">Ghost</Button>
+<Button variant="link">Link</Button>
+```
+
+### Badge Variants
+
+```tsx
+<Badge variant="default">Default</Badge>
+<Badge variant="secondary">Secondary</Badge>
+<Badge variant="destructive">Destructive</Badge>
+<Badge variant="outline">Outline</Badge>
+```
+
+## TypeScript Support
+
+All components are fully typed:
+
+```tsx
+import { type ButtonProps } from '@/components/ui/button'
+import { type InputProps } from '@/components/ui/input'
+
+interface MyComponentProps {
+  buttonProps?: ButtonProps
+  inputProps?: InputProps
+}
+```
+
+## Accessibility
+
+All components follow accessibility best practices:
+
+- **Keyboard Navigation**: Full keyboard support
+- **ARIA Attributes**: Proper labeling and roles
+- **Focus Management**: Visible focus indicators
+- **Screen Readers**: Descriptive announcements
+- **Color Contrast**: WCAG AA compliant
+
+## Performance
+
+Components are optimized for performance:
+
+- **Tree Shaking**: Only import what you use
+- **No Runtime CSS**: All styles compiled at build time
+- **Minimal Dependencies**: Core primitives from Radix UI
+- **Client-Side Only**: No server components overhead
+
+## Documentation
+
+For detailed documentation on each component, visit the [Shadcn UI documentation](https://ui.shadcn.com/docs/components).
+
+<Note>
+  The Shadcn UI documentation provides comprehensive guides for all components, including props, variants, and examples.
+</Note>
+
+## Customization
+
+### Modify Components
+
+All components live in `src/components/ui/` and can be modified:
+
+```tsx src/components/ui/button.tsx
+// Add a new variant
+const buttonVariants = cva(
+  'base-styles',
+  {
+    variants: {
+      variant: {
+        default: '...',
+        custom: 'bg-purple-500 text-white', // Your custom variant
+      },
+    },
+  }
+)
+```
+
+### Extend with New Props
+
+```tsx
+import { Button, type ButtonProps } from '@/components/ui/button'
+
+interface CustomButtonProps extends ButtonProps {
+  loading?: boolean
+}
+
+export function CustomButton({ loading, children, ...props }: CustomButtonProps) {
+  return (
+    <Button disabled={loading} {...props}>
+      {loading ? 'Loading...' : children}
+    </Button>
+  )
+}
+```
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Components Overview" href="/components/overview">
+    Explore all component categories
+  </Card>
+  <Card title="Theming" href="/customization/theme-configuration">
+    Customize component styles
+  </Card>
+  <Card title="App Sidebar" href="/components/app-sidebar">
+    Advanced sidebar implementation
+  </Card>
+  <Card title="Data Table" href="/components/data-table">
+    Table component with advanced features
+  </Card>
+</CardGroup>

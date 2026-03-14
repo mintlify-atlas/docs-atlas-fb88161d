@@ -1,0 +1,260 @@
+---
+title: App Sidebar
+description: Collapsible navigation sidebar with team switcher, navigation groups, and user profile.
+---
+
+The `AppSidebar` component provides a responsive, collapsible sidebar for application navigation. It supports multiple variants, states, and includes team switching, grouped navigation, and user profile sections.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Collapsible States" icon="arrows-left-right">
+    Default, icon-only, and offcanvas modes
+  </Card>
+  <Card title="Multiple Variants" icon="layout">
+    Inset, floating, and sidebar styles
+  </Card>
+  <Card title="Team Switcher" icon="users">
+    Switch between multiple teams or workspaces
+  </Card>
+  <Card title="Mobile Ready" icon="mobile">
+    Sheet overlay on mobile devices
+  </Card>
+</CardGroup>
+
+## Usage
+
+```tsx src/components/layout/app-sidebar.tsx
+import { AppSidebar } from '@/components/layout/app-sidebar'
+
+export function Layout() {
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        {/* Your content */}
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}
+```
+
+## Structure
+
+The sidebar is composed of three main sections:
+
+```tsx
+export function AppSidebar() {
+  const { collapsible, variant } = useLayout()
+  return (
+    <Sidebar collapsible={collapsible} variant={variant}>
+      <SidebarHeader>
+        <TeamSwitcher teams={sidebarData.teams} />
+      </SidebarHeader>
+      <SidebarContent>
+        {sidebarData.navGroups.map((props) => (
+          <NavGroup key={props.title} {...props} />
+        ))}
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={sidebarData.user} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}
+```
+
+## Configuration
+
+### Sidebar Data Structure
+
+The sidebar uses a typed data structure defined in `src/components/layout/types.ts:38`:
+
+<ParamField path="user" type="User" required>
+  User information for the footer profile section
+  
+  <ParamField path="name" type="string" required>
+    User's display name
+  </ParamField>
+  
+  <ParamField path="email" type="string" required>
+    User's email address
+  </ParamField>
+  
+  <ParamField path="avatar" type="string" required>
+    URL to user's avatar image
+  </ParamField>
+</ParamField>
+
+<ParamField path="teams" type="Team[]" required>
+  Array of teams available to switch between
+  
+  <ParamField path="name" type="string" required>
+    Team name
+  </ParamField>
+  
+  <ParamField path="logo" type="React.ElementType" required>
+    Team logo icon component
+  </ParamField>
+  
+  <ParamField path="plan" type="string" required>
+    Team plan or tier (e.g., "Enterprise", "Free")
+  </ParamField>
+</ParamField>
+
+<ParamField path="navGroups" type="NavGroup[]" required>
+  Navigation groups containing menu items
+  
+  <ParamField path="title" type="string" required>
+    Group title label
+  </ParamField>
+  
+  <ParamField path="items" type="NavItem[]" required>
+    Array of navigation items (links or collapsibles)
+  </ParamField>
+</ParamField>
+
+### Navigation Items
+
+Navigation items can be either links or collapsible groups:
+
+```typescript src/components/layout/types.ts
+type NavLink = BaseNavItem & {
+  url: LinkProps['to'] | (string & {})
+  items?: never
+}
+
+type NavCollapsible = BaseNavItem & {
+  items: (BaseNavItem & { url: LinkProps['to'] | (string & {}) })[]
+  url?: never
+}
+
+type NavItem = NavCollapsible | NavLink
+```
+
+<ParamField path="title" type="string" required>
+  Navigation item label
+</ParamField>
+
+<ParamField path="icon" type="React.ElementType">
+  Lucide icon component
+</ParamField>
+
+<ParamField path="badge" type="string">
+  Badge text (e.g., "New", "3")
+</ParamField>
+
+<ParamField path="url" type="string">
+  Link destination (for NavLink items)
+</ParamField>
+
+<ParamField path="items" type="NavItem[]">
+  Sub-items (for NavCollapsible items)
+</ParamField>
+
+## Layout Options
+
+Control sidebar behavior using the `LayoutProvider`:
+
+### Collapsible Modes
+
+<ParamField path="collapsible" type="'offcanvas' | 'icon' | 'none'" default="icon">
+  Controls how the sidebar collapses:
+  
+  - `offcanvas` - Sidebar slides off-screen when collapsed
+  - `icon` - Sidebar shows only icons when collapsed  
+  - `none` - Sidebar cannot be collapsed
+</ParamField>
+
+### Variants
+
+<ParamField path="variant" type="'inset' | 'sidebar' | 'floating'" default="inset">
+  Visual style of the sidebar:
+  
+  - `inset` - Sidebar with rounded content area
+  - `sidebar` - Standard edge-to-edge sidebar
+  - `floating` - Floating sidebar with shadow
+</ParamField>
+
+```tsx
+import { useLayout } from '@/context/layout-provider'
+
+function MyComponent() {
+  const { collapsible, variant, setCollapsible, setVariant } = useLayout()
+  
+  return (
+    <div>
+      <button onClick={() => setCollapsible('icon')}>
+        Icon Mode
+      </button>
+      <button onClick={() => setVariant('floating')}>
+        Floating Style
+      </button>
+    </div>
+  )
+}
+```
+
+## Keyboard Shortcuts
+
+The sidebar includes built-in keyboard shortcuts:
+
+- **Cmd/Ctrl + B** - Toggle sidebar open/closed
+
+## Responsive Behavior
+
+- **Desktop (md+)**: Sidebar renders with selected variant and collapsible mode
+- **Mobile**: Sidebar renders as a Sheet overlay, toggled by SidebarTrigger
+
+## Customization
+
+### Using App Title Instead of Team Switcher
+
+Replace the TeamSwitcher with a simple app title:
+
+```tsx src/components/layout/app-sidebar.tsx
+import { AppTitle } from './app-title'
+
+<SidebarHeader>
+  <AppTitle />
+  {/* Instead of: <TeamSwitcher teams={sidebarData.teams} /> */}
+</SidebarHeader>
+```
+
+### Custom Navigation Groups
+
+Create custom navigation by modifying `sidebarData`:
+
+```tsx src/components/layout/data/sidebar-data.ts
+import { Home, Settings, Users } from 'lucide-react'
+
+export const sidebarData = {
+  navGroups: [
+    {
+      title: 'Main',
+      items: [
+        {
+          title: 'Dashboard',
+          url: '/',
+          icon: Home,
+        },
+        {
+          title: 'Team',
+          icon: Users,
+          items: [
+            { title: 'Members', url: '/team/members' },
+            { title: 'Roles', url: '/team/roles' },
+          ],
+        },
+      ],
+    },
+  ],
+}
+```
+
+## Related Components
+
+- [Header](/components/header) - Works alongside the sidebar
+- [Main Layout](/components/main-layout) - Main content area
+- [Config Drawer](/components/config-drawer) - Configure sidebar appearance

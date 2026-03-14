@@ -1,0 +1,244 @@
+---
+title: Local Development
+description: Set up and run Shadcn Admin in your local development environment
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- Node.js 18+ or compatible package manager (npm, pnpm, yarn, or bun)
+- Git for version control
+
+## Installation
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Shadcn Admin repository to your local machine:
+
+    ```bash
+    git clone https://github.com/satnaing/shadcn-admin.git
+    cd shadcn-admin
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install project dependencies using your preferred package manager:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm install
+      ```
+
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+
+      ```bash bun
+      bun install
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Start Development Server">
+    Run the development server:
+
+    ```bash
+    pnpm run dev
+    ```
+
+    The application will be available at `http://localhost:5173` (default Vite port).
+  </Step>
+</Steps>
+
+## Development Scripts
+
+The following npm scripts are available in `package.json`:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `dev` | `vite` | Starts the Vite development server with hot module replacement |
+| `build` | `tsc -b && vite build` | Type-checks with TypeScript and builds for production |
+| `preview` | `vite preview` | Preview the production build locally |
+| `lint` | `eslint .` | Run ESLint to check code quality |
+| `format` | `prettier --write .` | Format code with Prettier |
+| `format:check` | `prettier --check .` | Check if code is formatted correctly |
+| `knip` | `knip` | Find unused files, dependencies, and exports |
+
+## Development Features
+
+### Hot Module Replacement (HMR)
+
+Vite provides lightning-fast HMR out of the box. When you save changes to your files, the browser automatically updates without a full page reload, preserving application state.
+
+The project uses `@vitejs/plugin-react-swc` for React Fast Refresh:
+
+```ts vite.config.ts
+import react from '@vitejs/plugin-react-swc'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    // ... other plugins
+  ],
+})
+```
+
+### Path Aliases
+
+The `@` alias is configured to point to the `src` directory, making imports cleaner:
+
+```ts vite.config.ts
+import path from 'path'
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+})
+```
+
+Use it in your imports:
+
+```tsx
+import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/stores/auth-store'
+import { cn } from '@/lib/utils'
+```
+
+### Development Tools
+
+<CardGroup cols={2}>
+  <Card title="TanStack Router DevTools" icon="route">
+    Access the router devtools to inspect routes, params, and navigation state during development.
+  </Card>
+
+  <Card title="TanStack Query DevTools" icon="database">
+    Debug your data fetching, caching, and synchronization with the built-in query devtools.
+  </Card>
+</CardGroup>
+
+DevTools are automatically included in development mode:
+
+```tsx src/main.tsx
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+```
+
+## Environment Setup
+
+### Environment Variables
+
+Create a `.env` file in the project root for environment-specific configuration:
+
+```bash .env.example
+VITE_CLERK_PUBLISHABLE_KEY=
+```
+
+<Note>
+  Vite requires environment variables to be prefixed with `VITE_` to be exposed to the client-side code.
+</Note>
+
+### TypeScript Configuration
+
+The project uses TypeScript with strict mode enabled for better type safety:
+
+```json tsconfig.app.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
+}
+```
+
+## Debugging
+
+### Browser DevTools
+
+Vite generates source maps in development mode, allowing you to debug your TypeScript code directly in the browser:
+
+1. Open browser DevTools (F12)
+2. Navigate to the Sources tab
+3. Find your TypeScript files under `webpack://` or `vite://`
+4. Set breakpoints and debug as usual
+
+### Console Logging
+
+The project includes development-specific logging in several areas:
+
+```tsx src/main.tsx
+if (import.meta.env.DEV) console.log({ failureCount, error })
+```
+
+### React Query Retry Logic
+
+In development, failed queries won't retry to speed up debugging:
+
+```tsx src/main.tsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        // Don't retry in development
+        if (failureCount >= 0 && import.meta.env.DEV) return false
+        // Retry up to 3 times in production
+        if (failureCount > 3 && import.meta.env.PROD) return false
+        
+        return !(
+          error instanceof AxiosError &&
+          [401, 403].includes(error.response?.status ?? 0)
+        )
+      },
+    },
+  },
+})
+```
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    If port 5173 is already in use, Vite will automatically try the next available port. You can also specify a custom port:
+
+    ```bash
+    vite --port 3000
+    ```
+  </Accordion>
+
+  <Accordion title="Module not found errors">
+    If you encounter module resolution issues:
+
+    1. Clear node_modules: `rm -rf node_modules`
+    2. Clear package manager cache
+    3. Reinstall dependencies: `pnpm install`
+  </Accordion>
+
+  <Accordion title="TypeScript errors in IDE">
+    Ensure your IDE is using the workspace TypeScript version:
+
+    - VS Code: Select TypeScript version in bottom-right
+    - Restart TypeScript server if needed
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building for Production" href="/guides/building-production" icon="hammer">
+    Learn how to build and optimize your application for production deployment.
+  </Card>
+
+  <Card title="Deploying" href="/guides/deploying" icon="rocket">
+    Deploy your application to various hosting platforms.
+  </Card>
+</CardGroup>

@@ -1,0 +1,514 @@
+---
+title: Dark Mode
+description: Theme switching with light, dark, and system preferences
+icon: moon
+---
+
+Shadcn Admin includes a complete dark mode implementation with support for light, dark, and system preference detection. The theme persists across sessions and can be changed from multiple locations.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Three Theme Modes" icon="palette">
+    Light, dark, and system preference
+  </Card>
+  <Card title="Persistent State" icon="save">
+    Theme choice saved to cookies
+  </Card>
+  <Card title="System Detection" icon="desktop">
+    Auto-detects OS theme preference
+  </Card>
+  <Card title="Instant Switching" icon="bolt">
+    No flash of unstyled content
+  </Card>
+</CardGroup>
+
+## Theme Provider
+
+The theme system is powered by the `ThemeProvider`:
+
+```tsx src/context/theme-provider.tsx
+import { createContext, useContext, useEffect, useState, useMemo } from 'react'
+import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+
+type Theme = 'dark' | 'light' | 'system'
+type ResolvedTheme = Exclude<Theme, 'system'>
+
+const DEFAULT_THEME = 'system'
+const THEME_COOKIE_NAME = 'vite-ui-theme'
+const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+
+type ThemeProviderState = {
+  defaultTheme: Theme
+  resolvedTheme: ResolvedTheme
+  theme: Theme
+  setTheme: (theme: Theme) => void
+  resetTheme: () => void
+}
+
+const ThemeContext = createContext<ThemeProviderState>(initialState)
+
+export function ThemeProvider({
+  children,
+  defaultTheme = DEFAULT_THEME,
+  storageKey = THEME_COOKIE_NAME,
+}: ThemeProviderProps) {
+  const [theme, _setTheme] = useState<Theme>(
+    () => (getCookie(storageKey) as Theme) || defaultTheme
+  )
+
+  // Memoize the resolved theme calculation
+  const resolvedTheme = useMemo((): ResolvedTheme => {
+    if (theme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    }
+    return theme as ResolvedTheme
+  }, [theme])
+
+  useEffect(() => {
+    const root = window.document.documentElement
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+    const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
+      root.classList.remove('light', 'dark')
+      root.classList.add(currentResolvedTheme)
+    }
+
+    const handleChange = () => {
+      if (theme === 'system') {
+        const systemTheme = mediaQuery.matches ? 'dark' : 'light'
+        applyTheme(systemTheme)
+      }
+    }
+
+    applyTheme(resolvedTheme)
+    mediaQuery.addEventListener('change', handleChange)
+
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [theme, resolvedTheme])
+
+  const setTheme = (theme: Theme) => {
+    setCookie(storageKey, theme, THEME_COOKIE_MAX_AGE)
+    _setTheme(theme)
+  }
+
+  const resetTheme = () => {
+    removeCookie(storageKey)
+    _setTheme(DEFAULT_THEME)
+  }
+
+  return (
+    <ThemeContext value={{
+      defaultTheme,
+      resolvedTheme,
+      resetTheme,
+      theme,
+      setTheme,
+    }}>
+      {children}
+    </ThemeContext>
+  )
+}
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext)
+  if (!context) throw new Error('useTheme must be used within a ThemeProvider')
+  return context
+}
+```
+
+## Using the Theme Hook
+
+Access and control the theme from any component:
+
+```tsx
+import { useTheme } from '@/context/theme-provider'
+
+function MyComponent() {
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+      <p>Resolved to: {resolvedTheme}</p>
+      
+      <button onClick={() => setTheme('light')}>Light</button>
+      <button onClick={() => setTheme('dark')}>Dark</button>
+      <button onClick={() => setTheme('system')}>System</button>
+    </div>
+  )
+}
+```
+
+## Theme Modes
+
+### Light Mode
+
+Explicitly set light theme:
+
+```tsx
+const { setTheme } = useTheme()
+setTheme('light')
+```
+
+### Dark Mode
+
+Explicitly set dark theme:
+
+```tsx
+const { setTheme } = useTheme()
+setTheme('dark')
+```
+
+### System Mode
+
+Follow OS preference:
+
+```tsx
+const { setTheme } = useTheme()
+setTheme('system')
+```
+
+## Theme Toggle Button
+
+Create a simple theme toggle:
+
+```tsx
+import { Moon, Sun } from 'lucide-react'
+import { useTheme } from '@/context/theme-provider'
+import { Button } from '@/components/ui/button'
+
+export function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+    >
+      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <span className="sr-only">Toggle theme</span>
+    </Button>
+  )
+}
+```
+
+## Theme Dropdown
+
+Advanced theme selector with all options:
+
+```tsx
+import { Laptop, Moon, Sun } from 'lucide-react'
+import { useTheme } from '@/context/theme-provider'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+export function ThemeDropdown() {
+  const { setTheme } = useTheme()
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme('light')}>
+          <Sun className="mr-2 h-4 w-4" />
+          <span>Light</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme('dark')}>
+          <Moon className="mr-2 h-4 w-4" />
+          <span>Dark</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme('system')}>
+          <Laptop className="mr-2 h-4 w-4" />
+          <span>System</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+```
+
+## Appearance Settings Form
+
+The settings page includes a visual theme selector:
+
+```tsx src/features/settings/appearance/appearance-form.tsx
+import { useTheme } from '@/context/theme-provider'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+
+export function AppearanceForm() {
+  const { theme, setTheme } = useTheme()
+  
+  return (
+    <RadioGroup
+      value={theme}
+      onValueChange={setTheme}
+      className="grid grid-cols-2 gap-8"
+    >
+      <label>
+        <RadioGroupItem value="light" className="sr-only" />
+        <div className="border-2 rounded-md p-1 hover:border-accent">
+          <div className="space-y-2 rounded-sm bg-[#ecedef] p-2">
+            <div className="space-y-2 rounded-md bg-white p-2 shadow-xs">
+              <div className="h-2 w-[80px] rounded-lg bg-[#ecedef]" />
+              <div className="h-2 w-[100px] rounded-lg bg-[#ecedef]" />
+            </div>
+          </div>
+        </div>
+        <span className="block w-full p-2 text-center">Light</span>
+      </label>
+      
+      <label>
+        <RadioGroupItem value="dark" className="sr-only" />
+        <div className="border-2 rounded-md p-1 hover:border-accent">
+          <div className="space-y-2 rounded-sm bg-slate-950 p-2">
+            <div className="space-y-2 rounded-md bg-slate-800 p-2 shadow-xs">
+              <div className="h-2 w-[80px] rounded-lg bg-slate-400" />
+              <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
+            </div>
+          </div>
+        </div>
+        <span className="block w-full p-2 text-center">Dark</span>
+      </label>
+    </RadioGroup>
+  )
+}
+```
+
+## Command Menu Integration
+
+Change theme from the global search:
+
+```tsx
+import { useTheme } from '@/context/theme-provider'
+
+<CommandGroup heading="Theme">
+  <CommandItem onSelect={() => setTheme('light')}>
+    <Sun /> Light
+  </CommandItem>
+  <CommandItem onSelect={() => setTheme('dark')}>
+    <Moon /> Dark
+  </CommandItem>
+  <CommandItem onSelect={() => setTheme('system')}>
+    <Laptop /> System
+  </CommandItem>
+</CommandGroup>
+```
+
+## System Preference Detection
+
+The theme provider automatically detects system preferences:
+
+```tsx
+// Detects OS theme preference
+const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+
+// Listens for changes
+mediaQuery.addEventListener('change', handleChange)
+```
+
+## Resolved Theme
+
+Get the actual applied theme (never "system"):
+
+```tsx
+const { theme, resolvedTheme } = useTheme()
+
+// theme: 'system'
+// resolvedTheme: 'dark' (if OS prefers dark)
+```
+
+## Persistent Storage
+
+Theme preference is saved to cookies:
+
+```tsx
+// Automatically saved
+setTheme('dark')
+
+// Persists for 1 year
+const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+// Reset to default
+const { resetTheme } = useTheme()
+resetTheme()
+```
+
+## CSS Variables
+
+Theme colors are defined using CSS variables:
+
+```css
+/* Light mode */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  /* ... more variables */
+}
+
+/* Dark mode */
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  /* ... more variables */
+}
+```
+
+## Using Theme in Styles
+
+Style elements based on the current theme:
+
+```tsx
+// Tailwind dark: modifier
+<div className="bg-white dark:bg-slate-950">
+  <p className="text-gray-900 dark:text-gray-100">Content</p>
+</div>
+
+// CSS variables
+<div className="bg-background text-foreground">
+  <button className="bg-primary text-primary-foreground">
+    Button
+  </button>
+</div>
+```
+
+## Preventing Flash
+
+The theme is applied before React renders:
+
+```tsx
+// Theme class is added to <html> immediately
+document.documentElement.classList.add(resolvedTheme)
+
+// No flash of unstyled content
+```
+
+## Theme-Aware Images
+
+Show different images for each theme:
+
+```tsx
+import { useTheme } from '@/context/theme-provider'
+
+function Logo() {
+  const { resolvedTheme } = useTheme()
+  
+  return (
+    <img
+      src={resolvedTheme === 'dark' ? '/logo-dark.svg' : '/logo-light.svg'}
+      alt="Logo"
+    />
+  )
+}
+```
+
+## Theme Icons
+
+Use different icons for theme states:
+
+```tsx
+import { IconThemeLight, IconThemeDark, IconThemeSystem } from '@/assets/custom'
+
+const themeIcons = {
+  light: IconThemeLight,
+  dark: IconThemeDark,
+  system: IconThemeSystem,
+}
+
+function ThemeIndicator() {
+  const { theme } = useTheme()
+  const Icon = themeIcons[theme]
+  
+  return <Icon className="h-5 w-5" />
+}
+```
+
+## Reset Theme
+
+Reset to default system preference:
+
+```tsx
+const { resetTheme } = useTheme()
+
+<Button onClick={resetTheme}>
+  Reset to Default
+</Button>
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Semantic Colors">
+    Use CSS variables like `--primary` instead of hardcoded colors
+  </Step>
+  <Step title="Test Both Themes">
+    Always verify components work well in both light and dark modes
+  </Step>
+  <Step title="Respect System Preference">
+    Default to 'system' mode when possible
+  </Step>
+  <Step title="Provide Visual Feedback">
+    Show current theme state in UI elements
+  </Step>
+  <Step title="Optimize Transitions">
+    Use smooth transitions when switching themes
+  </Step>
+</Steps>
+
+## Accessibility
+
+**WCAG Compliance**
+
+Ensure sufficient contrast in both themes:
+
+```tsx
+// Light mode: dark text on light background
+// Dark mode: light text on dark background
+```
+
+**Prefers Reduced Motion**
+
+Respect motion preferences:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+```
+
+**Screen Readers**
+
+Provide descriptive labels:
+
+```tsx
+<button aria-label="Toggle theme">
+  <span className="sr-only">Toggle theme</span>
+</button>
+```
+
+<Note>
+  The theme automatically syncs across all browser tabs using cookie storage.
+</Note>
+
+<Tip>
+  Combine theme switching with the command menu (Cmd+K) for the best user experience.
+</Tip>

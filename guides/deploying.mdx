@@ -1,0 +1,426 @@
+---
+title: Deploying
+description: Deploy your Shadcn Admin application to various hosting platforms
+---
+
+## Overview
+
+Shadcn Admin is a static single-page application (SPA) built with Vite. After building, you'll have static files in the `dist` directory that can be deployed to any static hosting service.
+
+## Build for Deployment
+
+First, create a production build:
+
+```bash
+pnpm run build
+```
+
+This generates optimized static files in the `dist` directory.
+
+## Deployment Platforms
+
+### Vercel
+
+Vercel provides zero-configuration deployment for Vite applications.
+
+<Steps>
+  <Step title="Install Vercel CLI">
+    ```bash
+    pnpm add -g vercel
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    vercel
+    ```
+
+    Follow the prompts to link your project and deploy.
+  </Step>
+
+  <Step title="Configure (Optional)">
+    Create a `vercel.json` file for advanced configuration:
+
+    ```json vercel.json
+    {
+      "buildCommand": "pnpm run build",
+      "outputDirectory": "dist",
+      "framework": "vite"
+    }
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Vercel automatically detects Vite projects and configures the build settings. You can also deploy via GitHub integration for automatic deployments on push.
+</Tip>
+
+### Netlify
+
+Netlify offers continuous deployment from Git with automatic builds.
+
+<Steps>
+  <Step title="Create netlify.toml">
+    ```toml netlify.toml
+    [build]
+      command = "pnpm run build"
+      publish = "dist"
+
+    [[redirects]]
+      from = "/*"
+      to = "/index.html"
+      status = 200
+    ```
+
+    <Note>
+      The redirect rule ensures client-side routing works correctly.
+    </Note>
+  </Step>
+
+  <Step title="Deploy via Git">
+    1. Push your code to GitHub/GitLab/Bitbucket
+    2. Connect your repository in Netlify dashboard
+    3. Netlify will automatically build and deploy
+  </Step>
+
+  <Step title="Or use Netlify CLI">
+    ```bash
+    pnpm add -g netlify-cli
+    netlify deploy --prod
+    ```
+  </Step>
+</Steps>
+
+### Cloudflare Pages
+
+Cloudflare Pages provides fast global deployment with excellent performance.
+
+<Steps>
+  <Step title="Connect Repository">
+    1. Go to Cloudflare Pages dashboard
+    2. Create a new project
+    3. Connect your Git repository
+  </Step>
+
+  <Step title="Configure Build Settings">
+    - **Build command:** `pnpm run build`
+    - **Build output directory:** `dist`
+    - **Framework preset:** Vite
+  </Step>
+
+  <Step title="Deploy">
+    Cloudflare Pages will automatically build and deploy on every push to your repository.
+  </Step>
+</Steps>
+
+### GitHub Pages
+
+Deploy to GitHub Pages for free hosting.
+
+<Steps>
+  <Step title="Update vite.config.ts">
+    Set the base path for your repository:
+
+    ```ts vite.config.ts
+    export default defineConfig({
+      base: '/your-repo-name/',
+      // ... other config
+    })
+    ```
+  </Step>
+
+  <Step title="Create Deploy Script">
+    Add to `package.json`:
+
+    ```json
+    "scripts": {
+      "deploy": "vite build && gh-pages -d dist"
+    }
+    ```
+
+    Install gh-pages:
+
+    ```bash
+    pnpm add -D gh-pages
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    pnpm run deploy
+    ```
+  </Step>
+</Steps>
+
+### AWS S3 + CloudFront
+
+For enterprise-grade deployment with full control.
+
+<Steps>
+  <Step title="Create S3 Bucket">
+    - Enable static website hosting
+    - Set bucket policy for public read access
+  </Step>
+
+  <Step title="Upload Build Files">
+    ```bash
+    aws s3 sync dist/ s3://your-bucket-name --delete
+    ```
+  </Step>
+
+  <Step title="Configure CloudFront">
+    - Create CloudFront distribution
+    - Point origin to S3 bucket
+    - Set custom error response: 404 → /index.html (200)
+  </Step>
+
+  <Step title="Invalidate Cache on Deploy">
+    ```bash
+    aws cloudfront create-invalidation \
+      --distribution-id YOUR_DIST_ID \
+      --paths "/*"
+    ```
+  </Step>
+</Steps>
+
+### Docker
+
+Containerize your application for consistent deployments.
+
+<Steps>
+  <Step title="Create Dockerfile">
+    ```dockerfile Dockerfile
+    # Build stage
+    FROM node:20-alpine AS builder
+    WORKDIR /app
+    COPY package.json pnpm-lock.yaml ./
+    RUN npm install -g pnpm && pnpm install --frozen-lockfile
+    COPY . .
+    RUN pnpm run build
+
+    # Production stage
+    FROM nginx:alpine
+    COPY --from=builder /app/dist /usr/share/nginx/html
+    COPY nginx.conf /etc/nginx/conf.d/default.conf
+    EXPOSE 80
+    CMD ["nginx", "-g", "daemon off;"]
+    ```
+  </Step>
+
+  <Step title="Create nginx.conf">
+    ```nginx nginx.conf
+    server {
+      listen 80;
+      server_name localhost;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      # Cache static assets
+      location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Build and Run">
+    ```bash
+    docker build -t shadcn-admin .
+    docker run -p 8080:80 shadcn-admin
+    ```
+  </Step>
+</Steps>
+
+## Environment Variables
+
+### Setting Environment Variables
+
+Different platforms have different ways to set environment variables:
+
+<CodeGroup>
+  ```bash Vercel
+  vercel env add VITE_CLERK_PUBLISHABLE_KEY
+  ```
+
+  ```bash Netlify
+  # In netlify.toml
+  [build.environment]
+    VITE_CLERK_PUBLISHABLE_KEY = "pk_live_xxxxx"
+  ```
+
+  ```bash Cloudflare Pages
+  # Set in dashboard under Settings > Environment variables
+  ```
+
+  ```bash Docker
+  docker run -e VITE_CLERK_PUBLISHABLE_KEY=pk_live_xxxxx \
+    -p 8080:80 shadcn-admin
+  ```
+</CodeGroup>
+
+<Warning>
+  Never commit sensitive environment variables to your repository. Use `.env.example` as a template and keep actual values in your hosting platform's environment variable settings.
+</Warning>
+
+## SPA Routing Configuration
+
+Since this is a single-page application using TanStack Router, you need to configure your server to redirect all requests to `index.html`.
+
+### Why This Is Needed
+
+When users navigate to routes like `/users` or `/settings`, the server needs to serve `index.html` so the client-side router can handle the routing.
+
+<Tabs>
+  <Tab title="Netlify">
+    ```toml netlify.toml
+    [[redirects]]
+      from = "/*"
+      to = "/index.html"
+      status = 200
+    ```
+  </Tab>
+
+  <Tab title="Vercel">
+    ```json vercel.json
+    {
+      "rewrites": [
+        { "source": "/(.*)", "destination": "/" }
+      ]
+    }
+    ```
+  </Tab>
+
+  <Tab title="Nginx">
+    ```nginx
+    location / {
+      try_files $uri $uri/ /index.html;
+    }
+    ```
+  </Tab>
+
+  <Tab title="Apache">
+    ```apache .htaccess
+    <IfModule mod_rewrite.c>
+      RewriteEngine On
+      RewriteBase /
+      RewriteRule ^index\.html$ - [L]
+      RewriteCond %{REQUEST_FILENAME} !-f
+      RewriteCond %{REQUEST_FILENAME} !-d
+      RewriteRule . /index.html [L]
+    </IfModule>
+    ```
+  </Tab>
+</Tabs>
+
+## Performance Optimization
+
+### Enable Compression
+
+Most hosting platforms enable gzip/brotli compression automatically. If self-hosting:
+
+```nginx nginx.conf
+gzip on;
+gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+gzip_min_length 1000;
+```
+
+### Set Cache Headers
+
+Configure proper cache headers for static assets:
+
+```nginx
+# Immutable assets (with hash in filename)
+location ~* \.[a-f0-9]{8}\.(js|css)$ {
+  expires 1y;
+  add_header Cache-Control "public, immutable";
+}
+
+# HTML (no cache)
+location ~* \.html$ {
+  add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
+```
+
+### Enable HTTP/2
+
+Most modern hosting platforms support HTTP/2 by default, which significantly improves loading performance.
+
+## Monitoring and Analytics
+
+Consider adding monitoring to track your application's performance:
+
+- **Vercel Analytics**: Built-in for Vercel deployments
+- **Google Analytics**: Add tracking code to `index.html`
+- **Sentry**: For error tracking and monitoring
+- **LogRocket**: For session replay and debugging
+
+## Deployment Checklist
+
+<Steps>
+  <Step title="Test Production Build Locally">
+    ```bash
+    pnpm run build && pnpm run preview
+    ```
+  </Step>
+
+  <Step title="Verify Environment Variables">
+    Ensure all required variables are set in your hosting platform.
+  </Step>
+
+  <Step title="Configure SPA Routing">
+    Set up redirects/rewrites for client-side routing.
+  </Step>
+
+  <Step title="Set Up Custom Domain (Optional)">
+    Configure DNS and SSL certificates for your custom domain.
+  </Step>
+
+  <Step title="Enable HTTPS">
+    Most platforms provide free SSL certificates via Let's Encrypt.
+  </Step>
+
+  <Step title="Test Deployment">
+    Visit your deployed application and test all routes and features.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="404 errors on page refresh">
+    Your server isn't configured to redirect all requests to `index.html`. See the [SPA Routing Configuration](#spa-routing-configuration) section above.
+  </Accordion>
+
+  <Accordion title="Environment variables are undefined">
+    - Verify variables are prefixed with `VITE_`
+    - Rebuild after setting environment variables
+    - Check they're set in the correct environment (production vs preview)
+  </Accordion>
+
+  <Accordion title="Assets not loading (404)">
+    If deploying to a subdirectory, set the `base` option in `vite.config.ts`:
+    
+    ```ts
+    export default defineConfig({
+      base: '/subdirectory/',
+    })
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Performance Optimization" href="/guides/performance-optimization" icon="gauge">
+    Learn advanced techniques to optimize your deployed application.
+  </Card>
+
+  <Card title="Clerk Integration" href="/guides/clerk-integration" icon="lock">
+    Set up authentication with Clerk in your deployed application.
+  </Card>
+</CardGroup>

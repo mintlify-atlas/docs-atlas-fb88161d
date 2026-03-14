@@ -1,0 +1,553 @@
+---
+title: Custom Components
+description: Create and customize components in Shadcn Admin using shadcn/ui
+---
+
+Shadcn Admin is built with shadcn/ui components, which are fully customizable and located in your project's `src/components/ui/` directory. This guide shows you how to add new components, customize existing ones, and follow the project's component patterns.
+
+## Component Architecture
+
+Understand the component structure:
+
+<CardGroup cols={2}>
+  <Card title="UI Components" icon="puzzle">
+    Base components from shadcn/ui in `src/components/ui/`
+  </Card>
+  <Card title="Layout Components" icon="layout">
+    Layout-specific components in `src/components/layout/`
+  </Card>
+  <Card title="Feature Components" icon="blocks">
+    Feature-specific components in `src/features/`
+  </Card>
+  <Card title="Shared Components" icon="share-2">
+    Reusable components in `src/components/`
+  </Card>
+</CardGroup>
+
+## Adding shadcn/ui Components
+
+Shadcn Admin uses the shadcn CLI to add pre-built components that you can customize.
+
+### Configuration
+
+The shadcn configuration is in `components.json:1-22`:
+
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/index.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "iconLibrary": "lucide"
+}
+```
+
+### Using the CLI
+
+<Steps>
+  <Step title="Add a Component">
+    Use the shadcn CLI to add any component from the library:
+    
+    ```bash
+    npx shadcn@latest add accordion
+    ```
+    
+    This adds the Accordion component to `src/components/ui/accordion.tsx`.
+  </Step>
+  
+  <Step title="Import and Use">
+    Import the component in your code:
+    
+    ```tsx
+    import {
+      Accordion,
+      AccordionContent,
+      AccordionItem,
+      AccordionTrigger,
+    } from '@/components/ui/accordion'
+    
+    function MyComponent() {
+      return (
+        <Accordion type="single" collapsible>
+          <AccordionItem value="item-1">
+            <AccordionTrigger>Is it accessible?</AccordionTrigger>
+            <AccordionContent>
+              Yes. It adheres to the WAI-ARIA design pattern.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )
+    }
+    ```
+  </Step>
+  
+  <Step title="Customize as Needed">
+    The component is now part of your codebase and can be customized directly in `src/components/ui/accordion.tsx`.
+  </Step>
+</Steps>
+
+## Component Patterns
+
+Follow these patterns used throughout Shadcn Admin:
+
+### Button Component Pattern
+
+From `src/components/ui/button.tsx:1-59`:
+
+```tsx
+import * as React from 'react'
+import { Slot } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90',
+        destructive: 'bg-destructive text-white shadow-xs hover:bg-destructive/90',
+        outline: 'border bg-background shadow-xs hover:bg-accent',
+        secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        default: 'h-9 px-4 py-2',
+        sm: 'h-8 rounded-md px-3',
+        lg: 'h-10 rounded-md px-6',
+        icon: 'size-9',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+)
+
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  ...props
+}: React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean
+  }) {
+  const Comp = asChild ? Slot : 'button'
+
+  return (
+    <Comp
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+
+export { Button, buttonVariants }
+```
+
+### Card Component Pattern
+
+From `src/components/ui/card.tsx:1-92`:
+
+```tsx
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+
+function Card({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm',
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      className={cn(
+        'grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6',
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      className={cn('leading-none font-semibold', className)}
+      {...props}
+    />
+  )
+}
+
+function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      className={cn('px-6', className)}
+      {...props}
+    />
+  )
+}
+
+export { Card, CardHeader, CardTitle, CardContent }
+```
+
+## Creating Custom Components
+
+Follow this pattern when creating custom components:
+
+<Steps>
+  <Step title="Create Component File">
+    Create a new file in the appropriate directory:
+    
+    ```tsx
+    // src/components/stat-card.tsx
+    import * as React from 'react'
+    import { cn } from '@/lib/utils'
+    import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    import { LucideIcon } from 'lucide-react'
+    
+    interface StatCardProps {
+      title: string
+      value: string | number
+      icon: LucideIcon
+      description?: string
+      trend?: {
+        value: number
+        isPositive: boolean
+      }
+      className?: string
+    }
+    
+    export function StatCard({
+      title,
+      value,
+      icon: Icon,
+      description,
+      trend,
+      className,
+    }: StatCardProps) {
+      return (
+        <Card className={className}>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              {title}
+            </CardTitle>
+            <Icon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{value}</div>
+            {description && (
+              <p className="text-xs text-muted-foreground">
+                {description}
+              </p>
+            )}
+            {trend && (
+              <div className={cn(
+                "text-xs",
+                trend.isPositive ? "text-green-600" : "text-red-600"
+              )}>
+                {trend.isPositive ? '↑' : '↓'} {trend.value}%
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )
+    }
+    ```
+  </Step>
+  
+  <Step title="Use the Component">
+    Import and use your custom component:
+    
+    ```tsx
+    import { StatCard } from '@/components/stat-card'
+    import { Users, DollarSign, ShoppingCart } from 'lucide-react'
+    
+    function Dashboard() {
+      return (
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard
+            title="Total Users"
+            value="1,234"
+            icon={Users}
+            description="Active users this month"
+            trend={{ value: 12.5, isPositive: true }}
+          />
+          <StatCard
+            title="Revenue"
+            value="$45,231"
+            icon={DollarSign}
+            trend={{ value: 8.2, isPositive: true }}
+          />
+          <StatCard
+            title="Orders"
+            value="543"
+            icon={ShoppingCart}
+            trend={{ value: 2.1, isPositive: false }}
+          />
+        </div>
+      )
+    }
+    ```
+  </Step>
+</Steps>
+
+## Customizing Existing Components
+
+You can modify any component in `src/components/ui/` to match your needs:
+
+### Adding New Variants
+
+```tsx
+// src/components/ui/button.tsx
+const buttonVariants = cva(
+  "...",
+  {
+    variants: {
+      variant: {
+        // Existing variants...
+        default: '...',
+        destructive: '...',
+        
+        // Add custom variant
+        success: 'bg-green-600 text-white hover:bg-green-700',
+        warning: 'bg-yellow-600 text-white hover:bg-yellow-700',
+      },
+      size: {
+        // Add custom size
+        xs: 'h-7 px-2 text-xs',
+        // ... existing sizes
+      },
+    },
+  }
+)
+```
+
+Use the new variants:
+
+```tsx
+<Button variant="success">Save Changes</Button>
+<Button variant="warning" size="xs">Warning</Button>
+```
+
+### Extending Component Props
+
+```tsx
+// Add a loading state to Button
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  loading = false,
+  children,
+  ...props
+}: React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean
+    loading?: boolean
+  }) {
+  const Comp = asChild ? Slot : 'button'
+
+  return (
+    <Comp
+      className={cn(buttonVariants({ variant, size, className }))}
+      disabled={loading || props.disabled}
+      {...props}
+    >
+      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {children}
+    </Comp>
+  )
+}
+```
+
+## Utility Patterns
+
+Shadcn Admin uses several utility patterns:
+
+### Class Name Merging
+
+```tsx
+import { cn } from '@/lib/utils'
+
+function MyComponent({ className }: { className?: string }) {
+  return (
+    <div className={cn(
+      "base classes here",
+      "conditional classes",
+      className // User's custom classes override defaults
+    )}>
+      Content
+    </div>
+  )
+}
+```
+
+### Composition with Radix UI
+
+```tsx
+import * as React from 'react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { cn } from '@/lib/utils'
+
+const Dialog = DialogPrimitive.Root
+const DialogTrigger = DialogPrimitive.Trigger
+
+const DialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogPrimitive.Overlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+))
+DialogContent.displayName = DialogPrimitive.Content.displayName
+
+export { Dialog, DialogTrigger, DialogContent }
+```
+
+## Layout Component Example
+
+From `src/components/layout/app-sidebar.tsx:1-38`:
+
+```tsx
+import { useLayout } from '@/context/layout-provider'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from '@/components/ui/sidebar'
+import { sidebarData } from './data/sidebar-data'
+import { NavGroup } from './nav-group'
+import { NavUser } from './nav-user'
+import { TeamSwitcher } from './team-switcher'
+
+export function AppSidebar() {
+  const { collapsible, variant } = useLayout()
+  return (
+    <Sidebar collapsible={collapsible} variant={variant}>
+      <SidebarHeader>
+        <TeamSwitcher teams={sidebarData.teams} />
+      </SidebarHeader>
+      <SidebarContent>
+        {sidebarData.navGroups.map((props) => (
+          <NavGroup key={props.title} {...props} />
+        ))}
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={sidebarData.user} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}
+```
+
+## Component Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Type Safety" icon="shield-check">
+    Always use TypeScript and define proper prop types
+  </Card>
+  <Card title="Accessibility" icon="accessibility">
+    Include proper ARIA attributes and keyboard navigation
+  </Card>
+  <Card title="Composition" icon="blocks">
+    Build complex components from smaller, reusable pieces
+  </Card>
+  <Card title="Variants" icon="palette">
+    Use class-variance-authority for variant management
+  </Card>
+</CardGroup>
+
+### Example: Accessible Component
+
+```tsx
+function AlertDialog({ title, description, onConfirm, onCancel }: AlertDialogProps) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="destructive">Delete</Button>
+      </DialogTrigger>
+      <DialogContent aria-describedby="alert-description">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription id="alert-description">
+            {description}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Confirm
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+<Tip>
+When customizing components, always preserve the accessibility features and keyboard navigation that shadcn/ui components provide out of the box.
+</Tip>
+
+## Available shadcn/ui Components
+
+Run this command to see all available components:
+
+```bash
+npx shadcn@latest add
+```
+
+Commonly used components already in the project:
+- Button, Card, Dialog, Sheet
+- Dropdown Menu, Popover, Tooltip
+- Table, Tabs, Accordion
+- Form, Input, Select, Checkbox
+- Alert, Badge, Separator
+- Sidebar, Scroll Area, Collapsible
+
+<Note>
+All components are stored in `src/components/ui/` and can be freely modified to suit your needs without affecting future updates.
+</Note>

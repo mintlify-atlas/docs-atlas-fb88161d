@@ -1,0 +1,268 @@
+---
+title: Main Layout
+description: Main content container with fixed and fluid layout options.
+---
+
+The `Main` component provides the primary content container for your application. It supports both fixed-height and auto-height layouts, as well as fluid or constrained width configurations.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Fixed Layout" icon="lock">
+    Constrains content height to prevent overflow
+  </Card>
+  <Card title="Fluid Width" icon="arrows-left-right">
+    Expands to full width or constrains to max-width
+  </Card>
+  <Card title="Container Queries" icon="magnifying-glass">
+    Uses @container queries for responsive design
+  </Card>
+  <Card title="Semantic HTML" icon="code">
+    Renders as semantic &lt;main&gt; element
+  </Card>
+</CardGroup>
+
+## Usage
+
+```tsx
+import { Main } from '@/components/layout/main'
+import { Header } from '@/components/layout/header'
+
+export function PageLayout({ children }) {
+  return (
+    <>
+      <Header fixed />
+      <Main fixed>
+        {children}
+      </Main>
+    </>
+  )
+}
+```
+
+## Props
+
+<ParamField path="fixed" type="boolean" default="false">
+  When `true`, the main container:
+  - Sets height to fill viewport with flex grow
+  - Prevents content overflow
+  - Enables scrollable content areas
+  
+  Use this for dashboard layouts with fixed headers/footers.
+</ParamField>
+
+<ParamField path="fluid" type="boolean" default="false">
+  When `true`, the main container expands to full width.
+  
+  When `false` (default), content is constrained to a maximum width of `7xl` (80rem) and centered.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes to apply to the main element.
+</ParamField>
+
+## Implementation
+
+```tsx src/components/layout/main.tsx
+type MainProps = React.HTMLAttributes<HTMLElement> & {
+  fixed?: boolean
+  fluid?: boolean
+  ref?: React.Ref<HTMLElement>
+}
+
+export function Main({ fixed, className, fluid, ...props }: MainProps) {
+  return (
+    <main
+      data-layout={fixed ? 'fixed' : 'auto'}
+      className={cn(
+        'px-4 py-6',
+
+        // If layout is fixed, make the main container flex and grow
+        fixed && 'flex grow flex-col overflow-hidden',
+
+        // If layout is not fluid, set the max-width
+        !fluid &&
+          '@7xl/content:mx-auto @7xl/content:w-full @7xl/content:max-w-7xl',
+        className
+      )}
+      {...props}
+    />
+  )
+}
+```
+
+## Layout Modes
+
+### Auto Layout (Default)
+
+Content flows naturally with no height constraints:
+
+```tsx
+<Main>
+  <h1>Page Title</h1>
+  <p>Content that can be any height...</p>
+</Main>
+```
+
+**CSS applied:**
+```css
+padding: 1.5rem 1rem;
+```
+
+### Fixed Layout
+
+Content constrained to viewport height, ideal for dashboards:
+
+```tsx
+<Main fixed>
+  <div className="h-full overflow-auto">
+    {/* Scrollable content */}
+  </div>
+</Main>
+```
+
+**CSS applied:**
+```css
+display: flex;
+flex-direction: column;
+flex-grow: 1;
+overflow: hidden;
+```
+
+## Width Modes
+
+### Constrained Width (Default)
+
+Content centered with max-width at large screens:
+
+```tsx
+<Main>
+  {/* Content max-width: 80rem (1280px) */}
+</Main>
+```
+
+**Container query breakpoint:**
+```css
+@container/content (min-width: 90rem) {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 80rem;
+}
+```
+
+### Fluid Width
+
+Content expands to full width:
+
+```tsx
+<Main fluid>
+  {/* Full-width content */}
+</Main>
+```
+
+## Data Attributes
+
+The component sets a `data-layout` attribute for external styling:
+
+```tsx
+data-layout={fixed ? 'fixed' : 'auto'}
+```
+
+Use this in parent components:
+
+```css
+.parent:has([data-layout="fixed"]) {
+  /* Custom styles when main is fixed */
+}
+```
+
+## Examples
+
+### Dashboard Layout (Fixed)
+
+```tsx
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+
+export function DashboardLayout({ children }) {
+  return (
+    <>
+      <Header fixed>
+        <h1>Dashboard</h1>
+      </Header>
+      <Main fixed>
+        <div className="grid h-full gap-4">
+          {children}
+        </div>
+      </Main>
+    </>
+  )
+}
+```
+
+### Content Page (Auto)
+
+```tsx
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+
+export function ContentPage({ children }) {
+  return (
+    <>
+      <Header>
+        <Breadcrumbs />
+      </Header>
+      <Main>
+        <article className="prose">
+          {children}
+        </article>
+      </Main>
+    </>
+  )
+}
+```
+
+### Full-Width Data Table
+
+```tsx
+import { Main } from '@/components/layout/main'
+import { DataTable } from '@/components/data-table'
+
+export function UsersPage() {
+  return (
+    <Main fluid fixed>
+      <DataTable data={users} columns={columns} />
+    </Main>
+  )
+}
+```
+
+## Container Queries
+
+The Main component is used within `SidebarInset` which sets:
+
+```tsx src/components/layout/authenticated-layout.tsx
+<SidebarInset className="@container/content">
+  <Main />
+</SidebarInset>
+```
+
+This enables responsive design based on available width:
+
+```css
+@container/content (min-width: 90rem) {
+  /* Styles for wide containers */
+}
+```
+
+## Accessibility
+
+The component uses semantic HTML (`<main>`) which:
+- Identifies the primary content of the document
+- Enables screen reader skip navigation
+- Improves SEO and document structure
+
+## Related Components
+
+- [Header](/components/header) - Typically used above Main
+- [App Sidebar](/components/app-sidebar) - Navigation alongside Main

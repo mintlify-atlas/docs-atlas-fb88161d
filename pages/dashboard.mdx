@@ -1,0 +1,293 @@
+---
+title: Dashboard Page
+description: Analytics dashboard with charts, metrics cards, and recent sales
+icon: 'chart-line'
+---
+
+The Dashboard page is the main analytics view of Shadcn Admin, displaying key metrics, charts, and recent activity. It features a tabbed interface with Overview and Analytics sections.
+
+## Overview
+
+The Dashboard component provides a comprehensive view of business metrics with interactive charts and data visualizations.
+
+**Location:** `src/features/dashboard/index.tsx`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Metric Cards" icon="chart-bar">
+    Display key business metrics with icons and trend indicators
+  </Card>
+  <Card title="Interactive Charts" icon="chart-line">
+    Recharts-powered visualizations for revenue and analytics data
+  </Card>
+  <Card title="Recent Activity" icon="clock">
+    List of recent sales with customer avatars and amounts
+  </Card>
+  <Card title="Tabbed Interface" icon="folder-tree">
+    Multiple views (Overview, Analytics) for different data perspectives
+  </Card>
+</CardGroup>
+
+## Component Structure
+
+The dashboard uses a tabbed layout with multiple sub-components:
+
+```tsx src/features/dashboard/index.tsx
+export function Dashboard() {
+  return (
+    <>
+      <Header>
+        <TopNav links={topNav} />
+        <div className='ms-auto flex items-center space-x-4'>
+          <Search />
+          <ThemeSwitch />
+          <ConfigDrawer />
+          <ProfileDropdown />
+        </div>
+      </Header>
+
+      <Main>
+        <div className='mb-2 flex items-center justify-between space-y-2'>
+          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
+          <div className='flex items-center space-x-2'>
+            <Button>Download</Button>
+          </div>
+        </div>
+        <Tabs orientation='vertical' defaultValue='overview' className='space-y-4'>
+          <TabsList>
+            <TabsTrigger value='overview'>Overview</TabsTrigger>
+            <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+          </TabsList>
+          <TabsContent value='overview' className='space-y-4'>
+            {/* Overview content */}
+          </TabsContent>
+          <TabsContent value='analytics' className='space-y-4'>
+            <Analytics />
+          </TabsContent>
+        </Tabs>
+      </Main>
+    </>
+  )
+}
+```
+
+## Metric Cards
+
+The Overview tab displays four metric cards in a responsive grid:
+
+```tsx
+<div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+  <Card>
+    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+      <CardTitle className='text-sm font-medium'>Total Revenue</CardTitle>
+      <svg>...</svg>
+    </CardHeader>
+    <CardContent>
+      <div className='text-2xl font-bold'>$45,231.89</div>
+      <p className='text-xs text-muted-foreground'>
+        +20.1% from last month
+      </p>
+    </CardContent>
+  </Card>
+  {/* More cards: Subscriptions, Sales, Active Now */}
+</div>
+```
+
+Each card includes:
+- **Icon**: SVG icon representing the metric type
+- **Value**: Large, bold number display
+- **Trend**: Percentage change from previous period
+
+## Overview Chart
+
+The Overview component uses Recharts to display monthly revenue data:
+
+```tsx src/features/dashboard/components/overview.tsx
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+
+export function Overview() {
+  return (
+    <ResponsiveContainer width='100%' height={350}>
+      <BarChart data={data}>
+        <XAxis
+          dataKey='name'
+          stroke='#888888'
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          stroke='#888888'
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) => `$${value}`}
+        />
+        <Bar
+          dataKey='total'
+          fill='currentColor'
+          radius={[4, 4, 0, 0]}
+          className='fill-primary'
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+```
+
+## Recent Sales Component
+
+Displays a list of recent transactions with customer information:
+
+```tsx src/features/dashboard/components/recent-sales.tsx
+export function RecentSales() {
+  return (
+    <div className='space-y-8'>
+      <div className='flex items-center gap-4'>
+        <Avatar className='h-9 w-9'>
+          <AvatarImage src='/avatars/01.png' alt='Avatar' />
+          <AvatarFallback>OM</AvatarFallback>
+        </Avatar>
+        <div className='flex flex-1 flex-wrap items-center justify-between'>
+          <div className='space-y-1'>
+            <p className='text-sm leading-none font-medium'>Olivia Martin</p>
+            <p className='text-sm text-muted-foreground'>
+              olivia.martin@email.com
+            </p>
+          </div>
+          <div className='font-medium'>+$1,999.00</div>
+        </div>
+      </div>
+      {/* More sales items */}
+    </div>
+  )
+}
+```
+
+## Analytics Tab
+
+The Analytics view provides deeper insights with additional metrics:
+
+```tsx src/features/dashboard/components/analytics.tsx
+export function Analytics() {
+  return (
+    <div className='space-y-4'>
+      <Card>
+        <CardHeader>
+          <CardTitle>Traffic Overview</CardTitle>
+          <CardDescription>Weekly clicks and unique visitors</CardDescription>
+        </CardHeader>
+        <CardContent className='px-6'>
+          <AnalyticsChart />
+        </CardContent>
+      </Card>
+      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+        {/* Metric cards: Total Clicks, Unique Visitors, Bounce Rate, Avg. Session */}
+      </div>
+    </div>
+  )
+}
+```
+
+### Analytics Chart
+
+Uses an area chart to visualize traffic data:
+
+```tsx src/features/dashboard/components/analytics-chart.tsx
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+
+export function AnalyticsChart() {
+  return (
+    <ResponsiveContainer width='100%' height={300}>
+      <AreaChart data={data}>
+        <XAxis dataKey='name' stroke='#888888' fontSize={12} />
+        <YAxis stroke='#888888' fontSize={12} />
+        <Area
+          type='monotone'
+          dataKey='clicks'
+          stroke='currentColor'
+          className='text-primary'
+          fill='currentColor'
+          fillOpacity={0.15}
+        />
+        <Area
+          type='monotone'
+          dataKey='uniques'
+          stroke='currentColor'
+          className='text-muted-foreground'
+          fill='currentColor'
+          fillOpacity={0.1}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+```
+
+## Customization
+
+### Changing Metrics
+
+Update the metric cards by modifying the Overview tab content in `dashboard/index.tsx:61-163`:
+
+```tsx
+<Card>
+  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+    <CardTitle className='text-sm font-medium'>Your Metric</CardTitle>
+    {/* Custom icon */}
+  </CardHeader>
+  <CardContent>
+    <div className='text-2xl font-bold'>Your Value</div>
+    <p className='text-xs text-muted-foreground'>Your description</p>
+  </CardContent>
+</Card>
+```
+
+### Adding New Tabs
+
+Extend the Tabs component with additional views:
+
+```tsx
+<TabsList>
+  <TabsTrigger value='overview'>Overview</TabsTrigger>
+  <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+  <TabsTrigger value='custom'>Custom View</TabsTrigger>
+</TabsList>
+<TabsContent value='custom'>
+  {/* Your custom content */}
+</TabsContent>
+```
+
+### Customizing Charts
+
+Modify chart appearance by adjusting Recharts props:
+
+```tsx
+<Bar
+  dataKey='total'
+  fill='#3b82f6' // Custom color
+  radius={[8, 8, 0, 0]} // Larger border radius
+/>
+```
+
+## Components Used
+
+- `Card`, `CardContent`, `CardHeader`, `CardTitle`, `CardDescription` from `@/components/ui/card`
+- `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger` from `@/components/ui/tabs`
+- `Avatar`, `AvatarImage`, `AvatarFallback` from `@/components/ui/avatar`
+- `Button` from `@/components/ui/button`
+- `Header`, `Main`, `TopNav` from `@/components/layout`
+- Recharts components: `BarChart`, `Bar`, `AreaChart`, `Area`, `ResponsiveContainer`, `XAxis`, `YAxis`
+
+## File Structure
+
+```
+src/features/dashboard/
+├── index.tsx                    # Main dashboard component
+├── components/
+│   ├── analytics.tsx            # Analytics tab content
+│   ├── analytics-chart.tsx      # Area chart for analytics
+│   ├── overview.tsx             # Bar chart for overview
+│   └── recent-sales.tsx         # Recent sales list
+```

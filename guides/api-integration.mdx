@@ -1,0 +1,556 @@
+---
+title: API Integration
+description: Set up API calls with Axios and TanStack Query for efficient data fetching and state management
+---
+
+## Overview
+
+Shadcn Admin uses **Axios** for HTTP requests and **TanStack Query** (React Query) for server state management, providing a powerful combination for data fetching, caching, and synchronization.
+
+## Tech Stack
+
+The application includes these data fetching dependencies:
+
+```json package.json
+{
+  "dependencies": {
+    "axios": "^1.13.2",
+    "@tanstack/react-query": "^5.90.12"
+  },
+  "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.91.1",
+    "@tanstack/eslint-plugin-query": "^5.91.2"
+  }
+}
+```
+
+## Query Client Setup
+
+The Query Client is configured in `src/main.tsx` with optimized defaults:
+
+```tsx src/main.tsx
+import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { toast } from 'sonner'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        // Don't retry in development for faster debugging
+        if (failureCount >= 0 && import.meta.env.DEV) return false
+        // Retry up to 3 times in production
+        if (failureCount > 3 && import.meta.env.PROD) return false
+
+        // Don't retry on authentication errors
+        return !(
+          error instanceof AxiosError &&
+          [401, 403].includes(error.response?.status ?? 0)
+        )
+      },
+      refetchOnWindowFocus: import.meta.env.PROD,
+      staleTime: 10 * 1000, // 10 seconds
+    },
+    mutations: {
+      onError: (error) => {
+        handleServerError(error)
+
+        if (error instanceof AxiosError) {
+          if (error.response?.status === 304) {
+            toast.error('Content not modified!')
+          }
+        }
+      },
+    },
+  },
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (error instanceof AxiosError) {
+        // Handle 401 Unauthorized - redirect to login
+        if (error.response?.status === 401) {
+          toast.error('Session expired!')
+          useAuthStore.getState().auth.reset()
+          const redirect = `${router.history.location.href}`
+          router.navigate({ to: '/sign-in', search: { redirect } })
+        }
+        
+        // Handle 500 Internal Server Error
+        if (error.response?.status === 500) {
+          toast.error('Internal Server Error!')
+          if (import.meta.env.PROD) {
+            router.navigate({ to: '/500' })
+          }
+        }
+      }
+    },
+  }),
+})
+```
+
+**Key Configuration:**
+
+- **Smart retry logic**: No retries in dev, limited retries in prod
+- **Authentication awareness**: Don't retry 401/403 errors
+- **Stale time**: Data is fresh for 10 seconds
+- **Global error handling**: Automatic toast notifications and redirects
+- **Environment-specific behavior**: Different settings for dev vs prod
+
+## Error Handling Utility
+
+The project includes a centralized error handler:
+
+```ts src/lib/handle-server-error.ts
+import { AxiosError } from 'axios'
+import { toast } from 'sonner'
+
+export function handleServerError(error: unknown) {
+  console.log(error)
+
+  let errMsg = 'Something went wrong!'
+
+  if (
+    error &&
+    typeof error === 'object' &&
+    'status' in error &&
+    Number(error.status) === 204
+  ) {
+    errMsg = 'Content not found.'
+  }
+
+  if (error instanceof AxiosError) {
+    errMsg = error.response?.data.title
+  }
+
+  toast.error(errMsg)
+}
+```
+
+This utility:
+- Extracts error messages from different response formats
+- Shows user-friendly toast notifications
+- Logs errors for debugging
+
+## Data Fetching Patterns
+
+### Using TanStack Query with Axios
+
+While the project doesn't include a dedicated API service layer by default, here's the recommended pattern for fetching data:
+
+#### Create API Functions
+
+Create API functions using Axios:
+
+```ts src/services/users.ts
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+})
+
+// Add auth token to requests
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().auth.accessToken
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+export interface User {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  role: string
+  status: string
+}
+
+export const usersApi = {
+  getUsers: async (params?: { page?: number; pageSize?: number }) => {
+    const { data } = await api.get<User[]>('/users', { params })
+    return data
+  },
+
+  getUser: async (id: string) => {
+    const { data } = await api.get<User>(`/users/${id}`)
+    return data
+  },
+
+  createUser: async (user: Partial<User>) => {
+    const { data } = await api.post<User>('/users', user)
+    return data
+  },
+
+  updateUser: async (id: string, user: Partial<User>) => {
+    const { data } = await api.put<User>(`/users/${id}`, user)
+    return data
+  },
+
+  deleteUser: async (id: string) => {
+    await api.delete(`/users/${id}`)
+  },
+}
+```
+
+#### Use with TanStack Query
+
+Create query hooks for your components:
+
+```tsx src/features/users/hooks/use-users.ts
+import { useQuery } from '@tanstack/react-query'
+import { usersApi } from '@/services/users'
+
+export function useUsers(params?: { page?: number; pageSize?: number }) {
+  return useQuery({
+    queryKey: ['users', params],
+    queryFn: () => usersApi.getUsers(params),
+  })
+}
+
+export function useUser(id: string) {
+  return useQuery({
+    queryKey: ['users', id],
+    queryFn: () => usersApi.getUser(id),
+    enabled: !!id, // Only fetch if id exists
+  })
+}
+```
+
+Use in components:
+
+```tsx
+import { useUsers } from './hooks/use-users'
+
+function UsersList() {
+  const { data: users, isLoading, error } = useUsers({ 
+    page: 1, 
+    pageSize: 10 
+  })
+
+  if (isLoading) return <div>Loading...</div>
+  if (error) return <div>Error loading users</div>
+
+  return (
+    <div>
+      {users?.map(user => (
+        <div key={user.id}>{user.firstName}</div>
+      ))}
+    </div>
+  )
+}
+```
+
+### Mutations
+
+Handle data updates with mutations:
+
+```tsx src/features/users/hooks/use-create-user.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { usersApi, User } from '@/services/users'
+
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (user: Partial<User>) => usersApi.createUser(user),
+    
+    onSuccess: (newUser) => {
+      // Invalidate and refetch users list
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      
+      toast.success(`User ${newUser.firstName} created successfully!`)
+    },
+    
+    onError: (error) => {
+      // Error is already handled by global error handler
+      console.error('Failed to create user:', error)
+    },
+  })
+}
+```
+
+Use in a form:
+
+```tsx
+import { useCreateUser } from './hooks/use-create-user'
+
+function CreateUserForm() {
+  const createUser = useCreateUser()
+
+  const handleSubmit = (formData: Partial<User>) => {
+    createUser.mutate(formData)
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* form fields */}
+      <button 
+        type="submit" 
+        disabled={createUser.isPending}
+      >
+        {createUser.isPending ? 'Creating...' : 'Create User'}
+      </button>
+    </form>
+  )
+}
+```
+
+## Mock Data Pattern
+
+The current implementation uses mock data generation with `@faker-js/faker`:
+
+```ts src/features/users/data/users.ts
+import { faker } from '@faker-js/faker'
+
+// Set a fixed seed for consistent data
+faker.seed(67890)
+
+export const users = Array.from({ length: 500 }, () => {
+  const firstName = faker.person.firstName()
+  const lastName = faker.person.lastName()
+  return {
+    id: faker.string.uuid(),
+    firstName,
+    lastName,
+    username: faker.internet
+      .username({ firstName, lastName })
+      .toLocaleLowerCase(),
+    email: faker.internet.email({ firstName }).toLocaleLowerCase(),
+    phoneNumber: faker.phone.number({ style: 'international' }),
+    status: faker.helpers.arrayElement([
+      'active',
+      'inactive',
+      'invited',
+      'suspended',
+    ]),
+    role: faker.helpers.arrayElement([
+      'superadmin',
+      'admin',
+      'cashier',
+      'manager',
+    ]),
+    createdAt: faker.date.past(),
+    updatedAt: faker.date.recent(),
+  }
+})
+```
+
+This is useful for:
+- Development without a backend
+- Demo purposes
+- Testing UI with realistic data
+
+**Replace with real API calls** when connecting to your backend.
+
+## Optimistic Updates
+
+Implement optimistic updates for better UX:
+
+```tsx
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) =>
+      usersApi.updateUser(id, data),
+
+    // Optimistically update cache before mutation
+    onMutate: async ({ id, data }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['users', id] })
+
+      // Snapshot previous value
+      const previousUser = queryClient.getQueryData(['users', id])
+
+      // Optimistically update
+      queryClient.setQueryData(['users', id], (old: User) => ({
+        ...old,
+        ...data,
+      }))
+
+      return { previousUser }
+    },
+
+    // Rollback on error
+    onError: (err, { id }, context) => {
+      queryClient.setQueryData(['users', id], context?.previousUser)
+    },
+
+    // Refetch after success or error
+    onSettled: (data, error, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['users', id] })
+    },
+  })
+}
+```
+
+## Pagination and Filtering
+
+Handle URL-based state for tables:
+
+```tsx src/routes/_authenticated/users/index.tsx
+import z from 'zod'
+import { createFileRoute } from '@tanstack/react-router'
+
+const usersSearchSchema = z.object({
+  page: z.number().optional().catch(1),
+  pageSize: z.number().optional().catch(10),
+  status: z
+    .array(
+      z.union([
+        z.literal('active'),
+        z.literal('inactive'),
+        z.literal('invited'),
+        z.literal('suspended'),
+      ])
+    )
+    .optional()
+    .catch([]),
+  role: z.array(z.string()).optional().catch([]),
+  username: z.string().optional().catch(''),
+})
+
+export const Route = createFileRoute('/_authenticated/users/')({
+  validateSearch: usersSearchSchema,
+  component: Users,
+})
+```
+
+Access params in your component:
+
+```tsx
+import { useSearch } from '@tanstack/react-router'
+
+function Users() {
+  const { page, pageSize, status, role } = useSearch({ 
+    from: '/_authenticated/users/' 
+  })
+
+  const { data } = useUsers({ page, pageSize, status, role })
+
+  // ...
+}
+```
+
+## Development Tools
+
+### React Query DevTools
+
+The DevTools are automatically available in development:
+
+```tsx src/main.tsx
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+
+<QueryClientProvider client={queryClient}>
+  <App />
+  <ReactQueryDevtools initialIsOpen={false} />
+</QueryClientProvider>
+```
+
+Access by clicking the TanStack Query logo in the bottom corner of your browser.
+
+### ESLint Plugin
+
+The project includes TanStack Query ESLint rules for best practices:
+
+```json
+{
+  "devDependencies": {
+    "@tanstack/eslint-plugin-query": "^5.91.2"
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Query Keys" icon="key">
+    Use consistent, hierarchical query keys:
+    
+    ```ts
+    ['users'] // all users
+    ['users', { page: 1 }] // users list page 1
+    ['users', id] // single user
+    ['users', id, 'posts'] // user's posts
+    ```
+  </Card>
+
+  <Card title="Stale Time" icon="clock">
+    Set appropriate stale times based on data update frequency:
+    
+    ```ts
+    // Rarely changes
+    staleTime: 1000 * 60 * 60 // 1 hour
+    
+    // Frequently changes
+    staleTime: 1000 * 10 // 10 seconds
+    ```
+  </Card>
+
+  <Card title="Error Boundaries" icon="shield">
+    Use error boundaries to catch query errors gracefully:
+    
+    ```tsx
+    <ErrorBoundary fallback={<ErrorPage />}>
+      <Component />
+    </ErrorBoundary>
+    ```
+  </Card>
+
+  <Card title="Loading States" icon="loader">
+    Always handle loading and error states:
+    
+    ```tsx
+    if (isLoading) return <Skeleton />
+    if (error) return <ErrorMessage />
+    return <DataView data={data} />
+    ```
+  </Card>
+</CardGroup>
+
+## TypeScript Types
+
+Define API types for better type safety:
+
+```ts src/types/api.ts
+export interface ApiResponse<T> {
+  data: T
+  message?: string
+  success: boolean
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface ApiError {
+  message: string
+  code: string
+  details?: unknown
+}
+```
+
+Use with Axios:
+
+```ts
+const { data } = await api.get<ApiResponse<User>>('/users/1')
+const user = data.data // Typed as User
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" href="/guides/state-management" icon="database">
+    Learn about client-side state management with Zustand and Context.
+  </Card>
+
+  <Card title="Clerk Integration" href="/guides/clerk-integration" icon="lock">
+    Integrate authentication tokens with your API calls.
+  </Card>
+</CardGroup>

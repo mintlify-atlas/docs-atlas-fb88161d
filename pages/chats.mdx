@@ -1,0 +1,487 @@
+---
+title: Chats Page
+description: Messaging interface with chat list, conversation view, and new chat dialog
+icon: 'messages'
+---
+
+The Chats page provides a messaging interface with a split-pane layout showing a chat list and conversation view, including a searchable new chat dialog.
+
+## Overview
+
+The Chats component implements a responsive messaging UI with real-time conversation display, date grouping, and user search functionality.
+
+**Location:** `src/features/chats/index.tsx`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Split Pane Layout" icon="layout-grid">
+    Chat list on left, conversation view on right
+  </Card>
+  <Card title="Search Functionality" icon="search">
+    Filter chats and search for users to message
+  </Card>
+  <Card title="Date Grouping" icon="calendar">
+    Messages grouped by date for better organization
+  </Card>
+  <Card title="Responsive Design" icon="mobile">
+    Mobile-friendly with swipeable conversation view
+  </Card>
+</CardGroup>
+
+## Component Structure
+
+The Chats page uses a complex state management system for handling chat selection:
+
+```tsx src/features/chats/index.tsx
+export function Chats() {
+  const [search, setSearch] = useState('')
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null)
+  const [mobileSelectedUser, setMobileSelectedUser] = useState<ChatUser | null>(null)
+  const [createConversationDialogOpened, setCreateConversationDialog] = useState(false)
+
+  // Filtered data based on the search query
+  const filteredChatList = conversations.filter(({ fullName }) =>
+    fullName.toLowerCase().includes(search.trim().toLowerCase())
+  )
+
+  return (
+    <>
+      <Header>
+        <Search />
+        <div className='ms-auto flex items-center space-x-4'>
+          <ThemeSwitch />
+          <ConfigDrawer />
+          <ProfileDropdown />
+        </div>
+      </Header>
+
+      <Main fixed>
+        <section className='flex h-full gap-6'>
+          {/* Chat List - Left Side */}
+          <div className='flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80'>
+            {/* Chat list content */}
+          </div>
+
+          {/* Conversation View - Right Side */}
+          {selectedUser ? (
+            <div className='flex-1 flex-col'>
+              {/* Conversation content */}
+            </div>
+          ) : (
+            <div className='flex-1 flex-col justify-center'>
+              {/* Empty state */}
+            </div>
+          )}
+        </section>
+        <NewChat users={users} onOpenChange={setCreateConversationDialog} open={createConversationDialogOpened} />
+      </Main>
+    </>
+  )
+}
+```
+
+## Chat List (Left Pane)
+
+The left pane displays a searchable list of conversations:
+
+```tsx
+<div className='flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80'>
+  <div className='sticky top-0 z-10 bg-background pb-3 shadow-md sm:static'>
+    <div className='flex items-center justify-between py-2'>
+      <div className='flex gap-2'>
+        <h1 className='text-2xl font-bold'>Inbox</h1>
+        <MessagesSquare size={20} />
+      </div>
+      <Button
+        size='icon'
+        variant='ghost'
+        onClick={() => setCreateConversationDialog(true)}
+        className='rounded-lg'
+      >
+        <Edit size={24} className='stroke-muted-foreground' />
+      </Button>
+    </div>
+
+    <label className='flex h-10 w-full items-center rounded-md border ps-2'>
+      <SearchIcon size={15} className='me-2' />
+      <input
+        type='text'
+        className='w-full flex-1 bg-inherit text-sm'
+        placeholder='Search chat...'
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+    </label>
+  </div>
+
+  <ScrollArea className='-mx-3 h-full overflow-scroll p-3'>
+    {filteredChatList.map((chatUsr) => {
+      const { id, profile, username, messages, fullName } = chatUsr
+      const lastConvo = messages[0]
+      const lastMsg = lastConvo.sender === 'You'
+        ? `You: ${lastConvo.message}`
+        : lastConvo.message
+      
+      return (
+        <Fragment key={id}>
+          <button
+            type='button'
+            className={cn(
+              'hover:bg-accent flex w-full rounded-md px-2 py-2',
+              selectedUser?.id === id && 'sm:bg-muted'
+            )}
+            onClick={() => {
+              setSelectedUser(chatUsr)
+              setMobileSelectedUser(chatUsr)
+            }}
+          >
+            <div className='flex gap-2'>
+              <Avatar>
+                <AvatarImage src={profile} alt={username} />
+                <AvatarFallback>{username}</AvatarFallback>
+              </Avatar>
+              <div>
+                <span className='font-medium'>{fullName}</span>
+                <span className='line-clamp-2 text-muted-foreground'>
+                  {lastMsg}
+                </span>
+              </div>
+            </div>
+          </button>
+          <Separator className='my-1' />
+        </Fragment>
+      )
+    })}
+  </ScrollArea>
+</div>
+```
+
+## Conversation View (Right Pane)
+
+The right pane shows the selected conversation with date-grouped messages:
+
+```tsx
+{selectedUser && (
+  <div className='flex-1 flex-col border rounded-md shadow-xs'>
+    {/* Top Part - User Info */}
+    <div className='mb-1 flex justify-between bg-card p-4 shadow-lg rounded-t-md'>
+      <div className='flex gap-3'>
+        <Button
+          size='icon'
+          variant='ghost'
+          className='sm:hidden'
+          onClick={() => setMobileSelectedUser(null)}
+        >
+          <ArrowLeft />
+        </Button>
+        <div className='flex items-center gap-2'>
+          <Avatar className='size-9 lg:size-11'>
+            <AvatarImage src={selectedUser.profile} alt={selectedUser.username} />
+            <AvatarFallback>{selectedUser.username}</AvatarFallback>
+          </Avatar>
+          <div>
+            <span className='text-sm font-medium lg:text-base'>
+              {selectedUser.fullName}
+            </span>
+            <span className='block text-xs text-muted-foreground lg:text-sm'>
+              {selectedUser.title}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className='flex items-center gap-1'>
+        <Button size='icon' variant='ghost' className='rounded-full'>
+          <Video size={22} />
+        </Button>
+        <Button size='icon' variant='ghost' className='rounded-full'>
+          <Phone size={22} />
+        </Button>
+        <Button size='icon' variant='ghost'>
+          <MoreVertical />
+        </Button>
+      </div>
+    </div>
+
+    {/* Messages */}
+    <div className='flex flex-1 flex-col gap-2 px-4 pb-4'>
+      <div className='flex-col-reverse overflow-y-auto'>
+        {currentMessage && Object.keys(currentMessage).map((key) => (
+          <Fragment key={key}>
+            {currentMessage[key].map((msg, index) => (
+              <div
+                key={`${msg.sender}-${msg.timestamp}-${index}`}
+                className={cn(
+                  'max-w-72 px-3 py-2 shadow-lg',
+                  msg.sender === 'You'
+                    ? 'self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground/75'
+                    : 'self-start rounded-[16px_16px_16px_0] bg-muted'
+                )}
+              >
+                {msg.message}
+                <span className='mt-1 block text-xs italic'>
+                  {format(msg.timestamp, 'h:mm a')}
+                </span>
+              </div>
+            ))}
+            <div className='text-center text-xs'>{key}</div>
+          </Fragment>
+        ))}
+      </div>
+    </div>
+
+    {/* Message Input */}
+    <form className='flex w-full gap-2'>
+      <div className='flex flex-1 items-center gap-2 rounded-md border px-2 py-1'>
+        <Button size='icon' type='button' variant='ghost'>
+          <Plus size={20} />
+        </Button>
+        <Button size='icon' type='button' variant='ghost'>
+          <ImagePlus size={20} />
+        </Button>
+        <Button size='icon' type='button' variant='ghost'>
+          <Paperclip size={20} />
+        </Button>
+        <input
+          type='text'
+          placeholder='Type your messages...'
+          className='h-8 w-full bg-inherit'
+        />
+        <Button variant='ghost' size='icon'>
+          <Send size={20} />
+        </Button>
+      </div>
+    </form>
+  </div>
+)}
+```
+
+## Date Grouping Messages
+
+Messages are grouped by date using a reducer pattern:
+
+```tsx
+const currentMessage = selectedUser?.messages.reduce(
+  (acc: Record<string, Convo[]>, obj) => {
+    const key = format(obj.timestamp, 'd MMM, yyyy')
+
+    // Create an array for the category if it doesn't exist
+    if (!acc[key]) {
+      acc[key] = []
+    }
+
+    // Push the current object to the array
+    acc[key].push(obj)
+
+    return acc
+  },
+  {}
+)
+```
+
+This creates an object where keys are date strings and values are arrays of messages:
+
+```js
+{
+  "14 Mar, 2026": [
+    { sender: "You", message: "Hello!", timestamp: ... },
+    { sender: "John", message: "Hi there!", timestamp: ... }
+  ],
+  "13 Mar, 2026": [
+    { sender: "You", message: "See you tomorrow", timestamp: ... }
+  ]
+}
+```
+
+## New Chat Dialog
+
+The NewChat component provides a searchable user selection dialog:
+
+```tsx src/features/chats/components/new-chat.tsx
+export function NewChat({ users, onOpenChange, open }: NewChatProps) {
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([])
+
+  const handleSelectUser = (user: User) => {
+    if (!selectedUsers.find((u) => u.id === user.id)) {
+      setSelectedUsers([...selectedUsers, user])
+    } else {
+      handleRemoveUser(user.id)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className='sm:max-w-[600px]'>
+        <DialogHeader>
+          <DialogTitle>New message</DialogTitle>
+        </DialogHeader>
+        <div className='flex flex-col gap-4'>
+          {/* Selected Users */}
+          <div className='flex flex-wrap gap-2'>
+            <span className='text-sm text-muted-foreground'>To:</span>
+            {selectedUsers.map((user) => (
+              <Badge key={user.id} variant='default'>
+                {user.fullName}
+                <button onClick={() => handleRemoveUser(user.id)}>
+                  <X className='h-3 w-3' />
+                </button>
+              </Badge>
+            ))}
+          </div>
+
+          {/* User Search */}
+          <Command className='rounded-lg border'>
+            <CommandInput placeholder='Search people...' />
+            <CommandList>
+              <CommandEmpty>No people found.</CommandEmpty>
+              <CommandGroup>
+                {users.map((user) => (
+                  <CommandItem
+                    key={user.id}
+                    onSelect={() => handleSelectUser(user)}
+                  >
+                    <div className='flex items-center gap-2'>
+                      <img
+                        src={user.profile}
+                        alt={user.fullName}
+                        className='h-8 w-8 rounded-full'
+                      />
+                      <div>
+                        <span className='text-sm font-medium'>
+                          {user.fullName}
+                        </span>
+                        <span className='text-xs'>{user.username}</span>
+                      </div>
+                    </div>
+                    {selectedUsers.find((u) => u.id === user.id) && (
+                      <Check className='h-4 w-4' />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+
+          <Button
+            onClick={() => showSubmittedData(selectedUsers)}
+            disabled={selectedUsers.length === 0}
+          >
+            Chat
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+```
+
+## Responsive Behavior
+
+The chat interface adapts to different screen sizes:
+
+<Steps>
+  <Step title="Desktop View">
+    Both panes visible side-by-side with fixed widths for the chat list.
+  </Step>
+  
+  <Step title="Mobile View">
+    Single pane view with transition between chat list and conversation:
+    ```tsx
+    className={cn(
+      'absolute inset-0 start-full z-50 hidden sm:static sm:flex',
+      mobileSelectedUser && 'start-0 flex'
+    )}
+    ```
+  </Step>
+  
+  <Step title="Back Navigation">
+    Arrow button appears on mobile to return to chat list:
+    ```tsx
+    <Button
+      className='sm:hidden'
+      onClick={() => setMobileSelectedUser(null)}
+    >
+      <ArrowLeft />
+    </Button>
+    ```
+  </Step>
+</Steps>
+
+## Customization
+
+### Changing Message Bubble Styles
+
+Modify the message appearance:
+
+```tsx
+<div
+  className={cn(
+    'max-w-80 px-4 py-3 shadow-md', // Changed max-width and padding
+    msg.sender === 'You'
+      ? 'self-end rounded-2xl bg-blue-500 text-white' // Custom colors
+      : 'self-start rounded-2xl bg-gray-100 text-gray-900'
+  )}
+>
+```
+
+### Adding Message Actions
+
+Implement message-level actions:
+
+```tsx
+<div className='group relative'>
+  <div className='message-bubble'>{msg.message}</div>
+  <div className='absolute right-0 top-0 hidden group-hover:flex'>
+    <Button size='sm' variant='ghost'>
+      <Reply size={14} />
+    </Button>
+    <Button size='sm' variant='ghost'>
+      <Copy size={14} />
+    </Button>
+  </div>
+</div>
+```
+
+### Customizing Empty State
+
+Modify the placeholder when no chat is selected:
+
+```tsx
+<div className='flex flex-col items-center space-y-6'>
+  <div className='flex size-16 items-center justify-center rounded-full border-2'>
+    <MessagesSquare className='size-8' />
+  </div>
+  <div className='space-y-2 text-center'>
+    <h1 className='text-xl font-semibold'>Your Custom Title</h1>
+    <p className='text-sm text-muted-foreground'>Your custom message</p>
+  </div>
+  <Button onClick={() => setCreateConversationDialog(true)}>
+    Custom Button Text
+  </Button>
+</div>
+```
+
+## Components Used
+
+- `Avatar`, `AvatarImage`, `AvatarFallback` from `@/components/ui/avatar`
+- `Button` from `@/components/ui/button`
+- `ScrollArea` from `@/components/ui/scroll-area`
+- `Separator` from `@/components/ui/separator`
+- `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle` from `@/components/ui/dialog`
+- `Command`, `CommandInput`, `CommandList`, `CommandItem`, `CommandGroup`, `CommandEmpty` from `@/components/ui/command`
+- `Badge` from `@/components/ui/badge`
+- Icons from `lucide-react`: `Edit`, `Search`, `Send`, `Video`, `Phone`, `ArrowLeft`, etc.
+
+## File Structure
+
+```
+src/features/chats/
+├── index.tsx                    # Main chats page
+├── components/
+│   └── new-chat.tsx             # New conversation dialog
+├── data/
+│   ├── chat-types.ts            # TypeScript types
+│   └── convo.json               # Mock conversation data
+```

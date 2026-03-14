@@ -1,0 +1,342 @@
+---
+title: Config Drawer
+description: Live theme customization drawer with settings for theme, sidebar, layout, and text direction.
+---
+
+The `ConfigDrawer` component provides a comprehensive settings panel for customizing the application's appearance. Users can adjust theme, sidebar style, layout mode, and text direction in real-time.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Theme Settings" icon="palette">
+    Switch between light, dark, and system themes
+  </Card>
+  <Card title="Sidebar Styles" icon="sidebar">
+    Choose between inset, floating, and standard sidebar
+  </Card>
+  <Card title="Layout Modes" icon="layout">
+    Default, compact (icon-only), and full layout options
+  </Card>
+  <Card title="RTL Support" icon="language">
+    Toggle between left-to-right and right-to-left layouts
+  </Card>
+</CardGroup>
+
+## Usage
+
+```tsx
+import { ConfigDrawer } from '@/components/config-drawer'
+
+export function Layout() {
+  return (
+    <div>
+      {/* Your layout */}
+      <ConfigDrawer />
+    </div>
+  )
+}
+```
+
+## Implementation
+
+```tsx src/components/config-drawer.tsx
+export function ConfigDrawer() {
+  const { setOpen } = useSidebar()
+  const { resetDir } = useDirection()
+  const { resetTheme } = useTheme()
+  const { resetLayout } = useLayout()
+
+  const handleReset = () => {
+    setOpen(true)
+    resetDir()
+    resetTheme()
+    resetLayout()
+  }
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          size='icon'
+          variant='ghost'
+          aria-label='Open theme settings'
+          className='rounded-full'
+        >
+          <Settings aria-hidden='true' />
+        </Button>
+      </SheetTrigger>
+      <SheetContent className='flex flex-col'>
+        <SheetHeader className='pb-0 text-start'>
+          <SheetTitle>Theme Settings</SheetTitle>
+          <SheetDescription>
+            Adjust the appearance and layout to suit your preferences.
+          </SheetDescription>
+        </SheetHeader>
+        <div className='space-y-6 overflow-y-auto px-4'>
+          <ThemeConfig />
+          <SidebarConfig />
+          <LayoutConfig />
+          <DirConfig />
+        </div>
+        <SheetFooter className='gap-2'>
+          <Button variant='destructive' onClick={handleReset}>
+            Reset
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+## Configuration Sections
+
+### Theme Settings
+
+Allows users to select their preferred color scheme:
+
+```tsx
+function ThemeConfig() {
+  const { defaultTheme, theme, setTheme } = useTheme()
+  return (
+    <Radio value={theme} onValueChange={setTheme}>
+      <RadioGroupItem value="system" label="System" icon={IconThemeSystem} />
+      <RadioGroupItem value="light" label="Light" icon={IconThemeLight} />
+      <RadioGroupItem value="dark" label="Dark" icon={IconThemeDark} />
+    </Radio>
+  )
+}
+```
+
+**Options:**
+- **System** - Follows OS theme preference
+- **Light** - Light color scheme
+- **Dark** - Dark color scheme
+
+### Sidebar Configuration
+
+Controls the visual style of the sidebar (desktop only):
+
+```tsx
+function SidebarConfig() {
+  const { defaultVariant, variant, setVariant } = useLayout()
+  return (
+    <Radio value={variant} onValueChange={setVariant}>
+      <RadioGroupItem value="inset" label="Inset" icon={IconSidebarInset} />
+      <RadioGroupItem value="floating" label="Floating" icon={IconSidebarFloating} />
+      <RadioGroupItem value="sidebar" label="Sidebar" icon={IconSidebarSidebar} />
+    </Radio>
+  )
+}
+```
+
+**Variants:**
+- **Inset** - Sidebar with rounded, inset content area
+- **Floating** - Floating sidebar with shadow and border
+- **Sidebar** - Standard edge-to-edge sidebar
+
+### Layout Configuration
+
+Controls how the sidebar collapses (desktop only):
+
+```tsx
+function LayoutConfig() {
+  const { open, setOpen } = useSidebar()
+  const { defaultCollapsible, collapsible, setCollapsible } = useLayout()
+
+  const radioState = open ? 'default' : collapsible
+
+  return (
+    <Radio
+      value={radioState}
+      onValueChange={(v) => {
+        if (v === 'default') {
+          setOpen(true)
+          return
+        }
+        setOpen(false)
+        setCollapsible(v as Collapsible)
+      }}
+    >
+      <RadioGroupItem value="default" label="Default" icon={IconLayoutDefault} />
+      <RadioGroupItem value="icon" label="Compact" icon={IconLayoutCompact} />
+      <RadioGroupItem value="offcanvas" label="Full layout" icon={IconLayoutFull} />
+    </Radio>
+  )
+}
+```
+
+**Modes:**
+- **Default** - Sidebar fully expanded
+- **Compact** - Icon-only sidebar (collapsed to icons)
+- **Full Layout** - Sidebar hidden completely (offcanvas)
+
+### Direction Configuration
+
+Toggles text direction for RTL language support:
+
+```tsx
+function DirConfig() {
+  const { defaultDir, dir, setDir } = useDirection()
+  return (
+    <Radio value={dir} onValueChange={setDir}>
+      <RadioGroupItem value="ltr" label="Left to Right" icon={IconDirLTR} />
+      <RadioGroupItem value="rtl" label="Right to Left" icon={IconDirRTL} />
+    </Radio>
+  )
+}
+```
+
+**Options:**
+- **LTR** - Left-to-right (default for English, etc.)
+- **RTL** - Right-to-left (for Arabic, Hebrew, etc.)
+
+## Context Providers
+
+The ConfigDrawer integrates with multiple context providers:
+
+### useTheme
+
+```tsx
+const { theme, setTheme, defaultTheme, resetTheme } = useTheme()
+```
+
+<ParamField path="theme" type="'light' | 'dark' | 'system'">
+  Current theme
+</ParamField>
+
+<ParamField path="setTheme" type="(theme: string) => void">
+  Update theme
+</ParamField>
+
+<ParamField path="resetTheme" type="() => void">
+  Reset to default theme
+</ParamField>
+
+### useLayout
+
+```tsx
+const { collapsible, setCollapsible, variant, setVariant, resetLayout } = useLayout()
+```
+
+<ParamField path="collapsible" type="'offcanvas' | 'icon' | 'none'">
+  Current collapse behavior
+</ParamField>
+
+<ParamField path="variant" type="'inset' | 'floating' | 'sidebar'">
+  Current sidebar variant
+</ParamField>
+
+<ParamField path="resetLayout" type="() => void">
+  Reset to default layout settings
+</ParamField>
+
+### useDirection
+
+```tsx
+const { dir, setDir, defaultDir, resetDir } = useDirection()
+```
+
+<ParamField path="dir" type="'ltr' | 'rtl'">
+  Current text direction
+</ParamField>
+
+<ParamField path="setDir" type="(dir: string) => void">
+  Update text direction
+</ParamField>
+
+### useSidebar
+
+```tsx
+const { open, setOpen } = useSidebar()
+```
+
+<ParamField path="open" type="boolean">
+  Sidebar open state
+</ParamField>
+
+<ParamField path="setOpen" type="(open: boolean) => void">
+  Control sidebar visibility
+</ParamField>
+
+## Persistence
+
+All settings are automatically persisted to cookies:
+
+- **Theme**: Saved to `theme` cookie
+- **Sidebar Variant**: Saved to `layout_variant` cookie (7-day expiry)
+- **Layout Collapsible**: Saved to `layout_collapsible` cookie (7-day expiry)
+- **Direction**: Saved to `direction` cookie
+
+## Reset Functionality
+
+The Reset button restores all settings to defaults:
+
+```tsx
+const handleReset = () => {
+  setOpen(true)        // Open sidebar
+  resetDir()           // Reset to LTR
+  resetTheme()         // Reset to system theme
+  resetLayout()        // Reset to icon/inset
+}
+```
+
+## Accessibility
+
+- **ARIA Labels**: All controls have descriptive labels
+- **ARIA Descriptions**: Each section includes helpful descriptions
+- **Keyboard Navigation**: Full keyboard support for radio groups
+- **Screen Reader Support**: Properly announced state changes
+
+```tsx
+<SheetTrigger asChild>
+  <Button
+    aria-label='Open theme settings'
+    aria-describedby='config-drawer-description'
+  >
+    <Settings aria-hidden='true' />
+  </Button>
+</SheetTrigger>
+```
+
+## Mobile Behavior
+
+On mobile devices:
+- Sidebar and Layout sections are hidden (desktop-only features)
+- Theme and Direction settings remain available
+- Sheet slides in from the right edge
+
+## Customization
+
+### Custom Icons
+
+Replace the default icons with your own:
+
+```tsx
+import { CustomIcon } from '@/assets/custom-icon'
+
+<RadioGroupItem 
+  value="custom" 
+  label="Custom" 
+  icon={CustomIcon} 
+/>
+```
+
+### Additional Settings
+
+Add new configuration sections:
+
+```tsx
+<div className='space-y-6 overflow-y-auto px-4'>
+  <ThemeConfig />
+  <SidebarConfig />
+  <LayoutConfig />
+  <DirConfig />
+  <CustomConfig /> {/* Your new section */}
+</div>
+```
+
+## Related Components
+
+- [App Sidebar](/components/app-sidebar) - Affected by sidebar settings
+- [Theme Switch](/components/theme-switch) - Alternative theme control

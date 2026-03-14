@@ -1,0 +1,295 @@
+---
+title: Command Menu
+description: Global search and command palette with keyboard navigation and theme switching.
+---
+
+The `CommandMenu` component provides a keyboard-driven command palette for quick navigation and actions. It integrates with the application's navigation structure and theme system.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Keyboard Navigation" icon="keyboard">
+    Launch with Cmd/Ctrl+K, navigate with arrow keys
+  </Card>
+  <Card title="Smart Search" icon="magnifying-glass">
+    Search across all navigation items and commands
+  </Card>
+  <Card title="Theme Switching" icon="palette">
+    Quick access to theme preferences
+  </Card>
+  <Card title="Auto Navigation" icon="route">
+    Automatically syncs with sidebar navigation structure
+  </Card>
+</CardGroup>
+
+## Usage
+
+```tsx
+import { CommandMenu } from '@/components/command-menu'
+import { SearchProvider } from '@/context/search-provider'
+
+export function App() {
+  return (
+    <SearchProvider>
+      <YourLayout />
+      <CommandMenu />
+    </SearchProvider>
+  )
+}
+```
+
+<Note>
+The CommandMenu must be wrapped in a `SearchProvider` to control its open/close state.
+</Note>
+
+## Opening the Command Menu
+
+Users can open the command menu in several ways:
+
+### Keyboard Shortcut
+
+Press **Cmd+K** (Mac) or **Ctrl+K** (Windows/Linux)
+
+### Programmatically
+
+```tsx
+import { useSearch } from '@/context/search-provider'
+
+function MyComponent() {
+  const { setOpen } = useSearch()
+  
+  return (
+    <button onClick={() => setOpen(true)}>
+      Open Command Menu
+    </button>
+  )
+}
+```
+
+## Implementation
+
+```tsx src/components/command-menu.tsx
+export function CommandMenu() {
+  const navigate = useNavigate()
+  const { setTheme } = useTheme()
+  const { open, setOpen } = useSearch()
+
+  const runCommand = React.useCallback(
+    (command: () => unknown) => {
+      setOpen(false)
+      command()
+    },
+    [setOpen]
+  )
+
+  return (
+    <CommandDialog modal open={open} onOpenChange={setOpen}>
+      <CommandInput placeholder='Type a command or search...' />
+      <CommandList>
+        <ScrollArea type='hover' className='h-72 pe-1'>
+          <CommandEmpty>No results found.</CommandEmpty>
+          {sidebarData.navGroups.map((group) => (
+            <CommandGroup key={group.title} heading={group.title}>
+              {/* Navigation items */}
+            </CommandGroup>
+          ))}
+          <CommandSeparator />
+          <CommandGroup heading='Theme'>
+            <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>
+              <Sun /> <span>Light</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => setTheme('dark'))}>
+              <Moon className='scale-90' />
+              <span>Dark</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => setTheme('system'))}>
+              <Laptop />
+              <span>System</span>
+            </CommandItem>
+          </CommandGroup>
+        </ScrollArea>
+      </CommandList>
+    </CommandDialog>
+  )
+}
+```
+
+## Navigation Integration
+
+The command menu automatically displays all navigation items from your sidebar configuration:
+
+```tsx
+{sidebarData.navGroups.map((group) => (
+  <CommandGroup key={group.title} heading={group.title}>
+    {group.items.map((navItem, i) => {
+      if (navItem.url)
+        return (
+          <CommandItem
+            key={`${navItem.url}-${i}`}
+            value={navItem.title}
+            onSelect={() => {
+              runCommand(() => navigate({ to: navItem.url }))
+            }}
+          >
+            <div className='flex size-4 items-center justify-center'>
+              <ArrowRight className='size-2 text-muted-foreground/80' />
+            </div>
+            {navItem.title}
+          </CommandItem>
+        )
+
+      return navItem.items?.map((subItem, i) => (
+        <CommandItem
+          key={`${navItem.title}-${subItem.url}-${i}`}
+          value={`${navItem.title}-${subItem.url}`}
+          onSelect={() => {
+            runCommand(() => navigate({ to: subItem.url }))
+          }}
+        >
+          <div className='flex size-4 items-center justify-center'>
+            <ArrowRight className='size-2 text-muted-foreground/80' />
+          </div>
+          {navItem.title} <ChevronRight /> {subItem.title}
+        </CommandItem>
+      ))
+    })}
+  </CommandGroup>
+))}
+```
+
+## Search Context
+
+The command menu state is managed by `SearchProvider`:
+
+```tsx
+import { createContext, useContext, useState } from 'react'
+
+const SearchContext = createContext<{
+  open: boolean
+  setOpen: (open: boolean) => void
+} | null>(null)
+
+export function useSearch() {
+  const context = useContext(SearchContext)
+  if (!context) {
+    throw new Error('useSearch must be used within SearchProvider')
+  }
+  return context
+}
+```
+
+## Available Commands
+
+### Navigation Commands
+
+All navigation items from `sidebarData.navGroups` are searchable:
+
+- Direct links (e.g., "Dashboard", "Settings")
+- Nested items (e.g., "Team > Members", "Team > Roles")
+
+### Theme Commands
+
+<CardGroup cols={3}>
+  <Card title="Light" icon="sun">
+    Switch to light theme
+  </Card>
+  <Card title="Dark" icon="moon">
+    Switch to dark theme
+  </Card>
+  <Card title="System" icon="laptop">
+    Use system preference
+  </Card>
+</CardGroup>
+
+## Customization
+
+### Adding Custom Commands
+
+Extend the command menu with custom actions:
+
+```tsx
+<CommandGroup heading='Actions'>
+  <CommandItem onSelect={() => runCommand(() => {
+    // Custom action
+    console.log('Custom command executed')
+  })}>
+    <Icon />
+    <span>Custom Command</span>
+  </CommandItem>
+</CommandGroup>
+```
+
+### Changing Keyboard Shortcut
+
+The keyboard shortcut is handled by the `SearchProvider`. Modify the provider to change the shortcut:
+
+```tsx
+React.useEffect(() => {
+  const down = (e: KeyboardEvent) => {
+    if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      setOpen((open) => !open)
+    }
+  }
+  document.addEventListener('keydown', down)
+  return () => document.removeEventListener('keydown', down)
+}, [])
+```
+
+### Styling the Dialog
+
+The command menu uses these sub-components:
+
+- `CommandDialog` - Modal wrapper
+- `CommandInput` - Search input field
+- `CommandList` - Results container
+- `CommandGroup` - Grouped items
+- `CommandItem` - Individual command
+- `CommandSeparator` - Visual separator
+
+## Accessibility
+
+- **Keyboard Navigation**: Arrow keys, Enter to select, Escape to close
+- **ARIA Labels**: Proper labeling for screen readers
+- **Focus Management**: Auto-focus on input when opened
+- **Modal Behavior**: Traps focus within the dialog
+
+## Examples
+
+### Search Trigger Button
+
+```tsx
+import { useSearch } from '@/context/search-provider'
+import { Search } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+function SearchTrigger() {
+  const { setOpen } = useSearch()
+  
+  return (
+    <Button 
+      variant="outline" 
+      onClick={() => setOpen(true)}
+      className="w-64 justify-start text-muted-foreground"
+    >
+      <Search className="mr-2 h-4 w-4" />
+      Search...
+      <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium">
+        <span className="text-xs">⌘</span>K
+      </kbd>
+    </Button>
+  )
+}
+```
+
+## Performance
+
+The command menu:
+- Renders only when open (controlled by `SearchProvider`)
+- Uses `useCallback` to memoize the `runCommand` function
+- Includes a ScrollArea for efficient rendering of long lists
+
+## Related Components
+
+- [App Sidebar](/components/app-sidebar) - Source of navigation data
+- [Theme Switch](/components/theme-switch) - Alternative theme switcher

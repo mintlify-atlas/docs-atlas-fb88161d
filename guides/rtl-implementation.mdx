@@ -1,0 +1,463 @@
+---
+title: RTL Implementation
+description: Implement right-to-left (RTL) language support in your Shadcn Admin application
+---
+
+## Overview
+
+Shadcn Admin includes comprehensive RTL (Right-to-Left) support for languages like Arabic, Hebrew, Persian, and Urdu. The implementation uses Radix UI's DirectionProvider and customized components for seamless bidirectional layouts.
+
+<Note>
+  RTL support is one of the key features that sets Shadcn Admin apart. Many Shadcn UI components have been specifically customized to work correctly in RTL mode.
+</Note>
+
+## Direction Provider
+
+The DirectionProvider manages the text direction state and persists it to cookies.
+
+### Implementation
+
+```tsx src/context/direction-provider.tsx
+import { createContext, useContext, useEffect, useState } from 'react'
+import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
+import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+
+export type Direction = 'ltr' | 'rtl'
+
+const DEFAULT_DIRECTION = 'ltr'
+const DIRECTION_COOKIE_NAME = 'dir'
+const DIRECTION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+
+export function DirectionProvider({ children }: { children: React.ReactNode }) {
+  const [dir, _setDir] = useState<Direction>(
+    () => (getCookie(DIRECTION_COOKIE_NAME) as Direction) || DEFAULT_DIRECTION
+  )
+
+  // Set dir attribute on html element
+  useEffect(() => {
+    const htmlElement = document.documentElement
+    htmlElement.setAttribute('dir', dir)
+  }, [dir])
+
+  const setDir = (dir: Direction) => {
+    _setDir(dir)
+    setCookie(DIRECTION_COOKIE_NAME, dir, DIRECTION_COOKIE_MAX_AGE)
+  }
+
+  const resetDir = () => {
+    _setDir(DEFAULT_DIRECTION)
+    removeCookie(DIRECTION_COOKIE_NAME)
+  }
+
+  return (
+    <DirectionContext value={{ defaultDir: DEFAULT_DIRECTION, dir, setDir, resetDir }}>
+      <RdxDirProvider dir={dir}>{children}</RdxDirProvider>
+    </DirectionContext>
+  )
+}
+```
+
+**Key Features:**
+
+- Persists direction preference to cookies
+- Sets `dir` attribute on `<html>` element
+- Wraps with Radix UI's DirectionProvider for component support
+- Provides hook for accessing and changing direction
+
+### Using the Direction Hook
+
+```tsx
+import { useDirection } from '@/context/direction-provider'
+
+function DirectionToggle() {
+  const { dir, setDir } = useDirection()
+
+  return (
+    <button onClick={() => setDir(dir === 'ltr' ? 'rtl' : 'ltr')}>
+      {dir === 'ltr' ? 'Switch to RTL' : 'Switch to LTR'}
+    </button>
+  )
+}
+```
+
+## Radix UI Integration
+
+The application uses `@radix-ui/react-direction` to ensure all Radix components respect the current direction:
+
+```json package.json
+{
+  "dependencies": {
+    "@radix-ui/react-direction": "^1.1.1"
+  }
+}
+```
+
+All Radix components (dropdowns, dialogs, popovers, etc.) automatically adapt to RTL mode when wrapped in the DirectionProvider.
+
+## Customized Components
+
+Several Shadcn UI components have been customized for proper RTL support.
+
+### RTL Updated Components
+
+These components have specific modifications for RTL layout and positioning:
+
+<CardGroup cols={3}>
+  <Card title="alert-dialog" icon="bell">
+    Dialog positioning and animations adjusted for RTL.
+  </Card>
+  
+  <Card title="calendar" icon="calendar">
+    Date picker navigation and layout flipped for RTL.
+  </Card>
+  
+  <Card title="command" icon="terminal">
+    Command palette search and results adapted.
+  </Card>
+  
+  <Card title="dialog" icon="square">
+    Modal positioning and close button placement.
+  </Card>
+  
+  <Card title="dropdown-menu" icon="menu">
+    Menu positioning and item alignment.
+  </Card>
+  
+  <Card title="select" icon="chevron-down">
+    Select dropdown and option alignment.
+  </Card>
+  
+  <Card title="table" icon="table">
+    Table column alignment and sorting icons.
+  </Card>
+  
+  <Card title="sheet" icon="sidebar">
+    Slide-out panel positioning (left/right swap).
+  </Card>
+  
+  <Card title="sidebar" icon="layout">
+    Sidebar positioning and collapse behavior.
+  </Card>
+  
+  <Card title="switch" icon="toggle">
+    Toggle switch animation direction.
+  </Card>
+</CardGroup>
+
+### Modified Components
+
+These components have general updates that may include RTL adjustments:
+
+- **scroll-area**: Scrollbar positioning
+- **sonner**: Toast notification positioning
+- **separator**: Spacing adjustments
+
+<Warning>
+  If you update these components using the Shadcn CLI (`npx shadcn@latest add <component>`), you may overwrite the RTL customizations. See the [Updating Components](/guides/updating-components) guide for details on safely updating.
+</Warning>
+
+## Tailwind CSS RTL Support
+
+Tailwind CSS provides logical property utilities that work with RTL automatically.
+
+### Directional Utilities
+
+Use logical properties instead of physical directions:
+
+<Tabs>
+  <Tab title="Recommended (RTL-aware)">
+    ```tsx
+    // Use 'start' and 'end' instead of 'left' and 'right'
+    <div className="ms-4 me-2">  {/* margin-inline-start, margin-inline-end */}
+    <div className="ps-4 pe-2">  {/* padding-inline-start, padding-inline-end */}
+    <div className="text-start">  {/* text-align: start */}
+    <div className="rounded-s-lg"> {/* border-radius start */}
+    ```
+  </Tab>
+
+  <Tab title="Physical (Not RTL-aware)">
+    ```tsx
+    // These won't flip in RTL mode
+    <div className="ml-4 mr-2">   {/* Always left/right */}
+    <div className="pl-4 pr-2">   {/* Always left/right */}
+    <div className="text-left">   {/* Always left */}
+    <div className="rounded-l-lg"> {/* Always left */}
+    ```
+  </Tab>
+</Tabs>
+
+### Common RTL Utilities
+
+| Physical | Logical | CSS Property |
+|----------|---------|-------------|
+| `ml-4` | `ms-4` | `margin-inline-start: 1rem` |
+| `mr-4` | `me-4` | `margin-inline-end: 1rem` |
+| `pl-4` | `ps-4` | `padding-inline-start: 1rem` |
+| `pr-4` | `pe-4` | `padding-inline-end: 1rem` |
+| `left-0` | `start-0` | `inset-inline-start: 0` |
+| `right-0` | `end-0` | `inset-inline-end: 0` |
+| `text-left` | `text-start` | `text-align: start` |
+| `text-right` | `text-end` | `text-align: end` |
+| `rounded-l` | `rounded-s` | `border-start-radius` |
+| `rounded-r` | `rounded-e` | `border-end-radius` |
+
+### Example: RTL-Aware Button
+
+```tsx
+function BackButton() {
+  return (
+    <button className="flex items-center gap-2 ps-4 pe-6">
+      <ChevronLeft className="rtl:rotate-180" />
+      <span>Back</span>
+    </button>
+  )
+}
+```
+
+In RTL mode:
+- Padding values flip automatically (`ps-4` becomes right padding)
+- Icon rotates 180° to point right instead of left
+
+## Icons and Directional Elements
+
+Some elements need manual flipping in RTL mode.
+
+### Rotating Icons
+
+Use the `rtl:` modifier to rotate directional icons:
+
+```tsx
+import { ChevronRight, ArrowLeft } from 'lucide-react'
+
+// Arrow icons
+<ChevronRight className="rtl:rotate-180" />
+<ArrowLeft className="rtl:rotate-180" />
+
+// Already in use in the codebase:
+<Link to="/forgot-password" className="absolute end-0 -top-0.5">
+  Forgot password?
+</Link>
+```
+
+### Transform Utilities
+
+Tailwind provides RTL-aware transform utilities:
+
+```tsx
+// Flip horizontally in RTL
+<div className="rtl:scale-x-[-1]">Content</div>
+
+// Rotate in RTL
+<div className="rtl:rotate-180">Directional element</div>
+```
+
+## Layout Patterns
+
+### Sidebar Example
+
+The sidebar automatically flips position in RTL:
+
+```tsx src/components/ui/sidebar.tsx
+const SIDEBAR_WIDTH = '16rem'
+const SIDEBAR_WIDTH_MOBILE = '18rem'
+const SIDEBAR_WIDTH_ICON = '3rem'
+
+// Sidebar uses logical properties throughout
+const sidebarVariants = cva(
+  'group flex h-full flex-col',
+  {
+    variants: {
+      variant: {
+        sidebar: 'border-e bg-sidebar text-sidebar-foreground',
+        floating: 'rounded-lg border bg-sidebar shadow-lg',
+        inset: 'bg-sidebar',
+      },
+    },
+  }
+)
+```
+
+Note the use of:
+- `border-e` (border-inline-end) instead of `border-r`
+- Logical flexbox properties
+
+### Form Layouts
+
+Forms automatically adapt to RTL:
+
+```tsx
+<FormItem className="relative">
+  <FormLabel>Password</FormLabel>
+  <FormControl>
+    <PasswordInput placeholder="********" {...field} />
+  </FormControl>
+  <FormMessage />
+  <Link
+    to="/forgot-password"
+    className="absolute end-0 -top-0.5 text-sm"
+  >
+    Forgot password?
+  </Link>
+</FormItem>
+```
+
+The "Forgot password?" link uses `end-0` to position correctly in both LTR and RTL.
+
+## Testing RTL
+
+### Manual Testing
+
+<Steps>
+  <Step title="Enable RTL Mode">
+    Use the direction toggle in your settings or configuration drawer to switch to RTL.
+  </Step>
+
+  <Step title="Check Layout">
+    Verify that:
+    - Text aligns to the right
+    - Sidebar appears on the right side
+    - Dropdowns open in the correct direction
+    - Icons point the right way
+  </Step>
+
+  <Step title="Test Interactive Elements">
+    - Open dialogs and modals
+    - Use dropdown menus
+    - Navigate through forms
+    - Test table interactions
+  </Step>
+
+  <Step title="Verify Animations">
+    - Slide-in animations should come from the correct side
+    - Transitions should feel natural
+  </Step>
+</Steps>
+
+### Browser DevTools
+
+You can test RTL without the toggle:
+
+```js
+// In browser console:
+document.documentElement.setAttribute('dir', 'rtl')
+
+// To revert:
+document.documentElement.setAttribute('dir', 'ltr')
+```
+
+## Common RTL Issues and Solutions
+
+<AccordionGroup>
+  <Accordion title="Text not aligned correctly">
+    **Problem**: Text remains left-aligned in RTL mode.
+    
+    **Solution**: Use `text-start` instead of `text-left`, or use `rtl:text-right` if you need explicit control.
+    
+    ```tsx
+    // Wrong
+    <p className="text-left">Content</p>
+    
+    // Correct
+    <p className="text-start">Content</p>
+    ```
+  </Accordion>
+
+  <Accordion title="Icons not flipping">
+    **Problem**: Directional icons (arrows, chevrons) don't flip in RTL.
+    
+    **Solution**: Add `rtl:rotate-180` to directional icons.
+    
+    ```tsx
+    <ChevronLeft className="rtl:rotate-180" />
+    ```
+  </Accordion>
+
+  <Accordion title="Spacing issues with margin/padding">
+    **Problem**: Margins and padding don't flip.
+    
+    **Solution**: Use logical properties (`ms`, `me`, `ps`, `pe`) instead of physical (`ml`, `mr`, `pl`, `pr`).
+    
+    ```tsx
+    // Wrong
+    <div className="ml-4 mr-2">
+    
+    // Correct
+    <div className="ms-4 me-2">
+    ```
+  </Accordion>
+
+  <Accordion title="Custom CSS not RTL-aware">
+    **Problem**: Custom CSS with left/right properties doesn't work in RTL.
+    
+    **Solution**: Use CSS logical properties or Tailwind's RTL modifiers.
+    
+    ```css
+    /* Wrong */
+    .custom {
+      margin-left: 1rem;
+    }
+    
+    /* Correct */
+    .custom {
+      margin-inline-start: 1rem;
+    }
+    ```
+    
+    Or with Tailwind:
+    ```tsx
+    <div className="ms-4 rtl:some-custom-class">
+    ```
+  </Accordion>
+
+  <Accordion title="Third-party components not RTL-aware">
+    **Problem**: External components don't support RTL.
+    
+    **Solution**: Wrap in a container with transforms or create RTL-aware wrappers.
+    
+    ```tsx
+    <div className="rtl:scale-x-[-1]">
+      <ThirdPartyComponent />
+    </div>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## RTL Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Always Use Logical Properties" icon="compass">
+    Default to `start`/`end` instead of `left`/`right` when building new components.
+  </Card>
+
+  <Card title="Flip Directional Icons" icon="repeat">
+    Add `rtl:rotate-180` to arrows, chevrons, and other directional icons.
+  </Card>
+
+  <Card title="Test Early and Often" icon="test-tube">
+    Toggle RTL mode frequently during development to catch issues early.
+  </Card>
+
+  <Card title="Consider Content" icon="text">
+    RTL languages may have longer words. Ensure layouts accommodate text expansion.
+  </Card>
+</CardGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Tailwind RTL" href="https://tailwindcss.com/docs/hover-focus-and-other-states#rtl-support" icon="book">
+    Official Tailwind CSS RTL documentation
+  </Card>
+
+  <Card title="Radix Direction" href="https://www.radix-ui.com/primitives/docs/utilities/direction-provider" icon="code">
+    Radix UI DirectionProvider documentation
+  </Card>
+
+  <Card title="Updating Components" href="/guides/updating-components" icon="wrench">
+    Learn how to safely update components without losing RTL support
+  </Card>
+
+  <Card title="MDN Logical Properties" href="https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Logical_Properties" icon="globe">
+    CSS Logical Properties reference
+  </Card>
+</CardGroup>

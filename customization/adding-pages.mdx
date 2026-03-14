@@ -1,0 +1,480 @@
+---
+title: Adding Pages
+description: Create new routes and add pages to the navigation sidebar using TanStack Router
+---
+
+Shadcn Admin uses TanStack Router for file-based routing. This guide shows you how to create new pages, add them to the sidebar navigation, and integrate them with the application layout.
+
+## Route Structure
+
+The routing system follows a file-based convention where route files are located in `src/routes/`.
+
+<CardGroup cols={2}>
+  <Card title="File-Based Routing" icon="folder-tree">
+    Routes are automatically generated from the file structure
+  </Card>
+  <Card title="Authenticated Routes" icon="lock">
+    Protected routes use the `_authenticated` directory
+  </Card>
+  <Card title="Layout Routes" icon="layout">
+    Special route files control layout nesting
+  </Card>
+  <Card title="Dynamic Routes" icon="code">
+    Support for path parameters and search params
+  </Card>
+</CardGroup>
+
+## Route File Types
+
+Understand the different route file patterns:
+
+### Root Route
+
+From `src/routes/__root.tsx:1-31`:
+
+```tsx
+import { type QueryClient } from '@tanstack/react-query'
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
+import { Toaster } from '@/components/ui/sonner'
+import { NavigationProgress } from '@/components/navigation-progress'
+import { GeneralError } from '@/features/errors/general-error'
+import { NotFoundError } from '@/features/errors/not-found-error'
+
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient
+}>>()({
+  component: () => {
+    return (
+      <>
+        <NavigationProgress />
+        <Outlet />
+        <Toaster duration={5000} />
+      </>
+    )
+  },
+  notFoundComponent: NotFoundError,
+  errorComponent: GeneralError,
+})
+```
+
+### Layout Routes
+
+Layout routes define shared layouts for nested routes. From `src/routes/_authenticated/route.tsx:1-7`:
+
+```tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+
+export const Route = createFileRoute('/_authenticated')({
+  component: AuthenticatedLayout,
+})
+```
+
+### Page Routes
+
+From `src/routes/_authenticated/index.tsx:1-7`:
+
+```tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { Dashboard } from '@/features/dashboard'
+
+export const Route = createFileRoute('/_authenticated/')({
+  component: Dashboard,
+})
+```
+
+## Creating a New Page
+
+Follow these steps to add a new page to your application:
+
+<Steps>
+  <Step title="Create the Page Component">
+    First, create your page component in the `src/features/` directory:
+    
+    ```tsx
+    // src/features/analytics/index.tsx
+    export function Analytics() {
+      return (
+        <div className="p-6">
+          <h1 className="text-2xl font-bold">Analytics</h1>
+          <p className="text-muted-foreground">View your analytics data</p>
+        </div>
+      )
+    }
+    ```
+  </Step>
+  
+  <Step title="Create the Route File">
+    Create a route file in `src/routes/_authenticated/`:
+    
+    ```tsx
+    // src/routes/_authenticated/analytics.tsx
+    import { createFileRoute } from '@tanstack/react-router'
+    import { Analytics } from '@/features/analytics'
+    
+    export const Route = createFileRoute('/_authenticated/analytics')({
+      component: Analytics,
+    })
+    ```
+    
+    This creates a route at `/analytics` that uses the authenticated layout.
+  </Step>
+  
+  <Step title="Add to Sidebar Navigation">
+    Update the sidebar data in `src/components/layout/data/sidebar-data.ts`:
+    
+    ```tsx
+    import { BarChart3 } from 'lucide-react'
+    
+    export const sidebarData: SidebarData = {
+      // ... existing config
+      navGroups: [
+        {
+          title: 'General',
+          items: [
+            // ... existing items
+            {
+              title: 'Analytics',
+              url: '/analytics',
+              icon: BarChart3,
+            },
+          ],
+        },
+      ],
+    }
+    ```
+  </Step>
+</Steps>
+
+## Route File Naming Conventions
+
+TanStack Router uses specific file naming patterns:
+
+<CodeGroup>
+```tsx Index Routes
+// src/routes/_authenticated/index.tsx
+// URL: /
+
+export const Route = createFileRoute('/_authenticated/')({
+  component: Dashboard,
+})
+```
+
+```tsx Named Routes
+// src/routes/_authenticated/analytics.tsx
+// URL: /analytics
+
+export const Route = createFileRoute('/_authenticated/analytics')({
+  component: Analytics,
+})
+```
+
+```tsx Nested Routes
+// src/routes/_authenticated/settings/index.tsx
+// URL: /settings
+
+export const Route = createFileRoute('/_authenticated/settings/')({
+  component: SettingsIndex,
+})
+
+// src/routes/_authenticated/settings/profile.tsx
+// URL: /settings/profile
+
+export const Route = createFileRoute('/_authenticated/settings/profile')({
+  component: SettingsProfile,
+})
+```
+
+```tsx Dynamic Routes
+// src/routes/_authenticated/users/$userId.tsx
+// URL: /users/:userId
+
+export const Route = createFileRoute('/_authenticated/users/$userId')({
+  component: UserDetail,
+})
+```
+</CodeGroup>
+
+## Adding Search Parameters
+
+Routes can validate and type search parameters using Zod schemas. From `src/routes/_authenticated/tasks/index.tsx:1-24`:
+
+```tsx
+import z from 'zod'
+import { createFileRoute } from '@tanstack/react-router'
+import { Tasks } from '@/features/tasks'
+import { priorities, statuses } from '@/features/tasks/data/data'
+
+const taskSearchSchema = z.object({
+  page: z.number().optional().catch(1),
+  pageSize: z.number().optional().catch(10),
+  status: z
+    .array(z.enum(statuses.map((status) => status.value)))
+    .optional()
+    .catch([]),
+  priority: z
+    .array(z.enum(priorities.map((priority) => priority.value)))
+    .optional()
+    .catch([]),
+  filter: z.string().optional().catch(''),
+})
+
+export const Route = createFileRoute('/_authenticated/tasks/')({
+  validateSearch: taskSearchSchema,
+  component: Tasks,
+})
+```
+
+Access search params in your component:
+
+```tsx
+import { useSearch } from '@tanstack/react-router'
+
+function Tasks() {
+  const { page, pageSize, status, priority, filter } = useSearch({
+    from: '/_authenticated/tasks/',
+  })
+  
+  return <div>Page: {page}</div>
+}
+```
+
+## Sidebar Navigation Configuration
+
+The sidebar navigation is configured in `src/components/layout/data/sidebar-data.ts:28-205`:
+
+```tsx
+import {
+  LayoutDashboard,
+  ListTodo,
+  Package,
+  Users,
+  Settings,
+} from 'lucide-react'
+
+export const sidebarData: SidebarData = {
+  user: {
+    name: 'satnaing',
+    email: 'satnaingdev@gmail.com',
+    avatar: '/avatars/shadcn.jpg',
+  },
+  teams: [
+    {
+      name: 'Shadcn Admin',
+      logo: Command,
+      plan: 'Vite + ShadcnUI',
+    },
+  ],
+  navGroups: [
+    {
+      title: 'General',
+      items: [
+        {
+          title: 'Dashboard',
+          url: '/',
+          icon: LayoutDashboard,
+        },
+        {
+          title: 'Tasks',
+          url: '/tasks',
+          icon: ListTodo,
+        },
+        {
+          title: 'Apps',
+          url: '/apps',
+          icon: Package,
+        },
+        {
+          title: 'Users',
+          url: '/users',
+          icon: Users,
+        },
+      ],
+    },
+    {
+      title: 'Other',
+      items: [
+        {
+          title: 'Settings',
+          icon: Settings,
+          items: [
+            {
+              title: 'Profile',
+              url: '/settings',
+            },
+            {
+              title: 'Account',
+              url: '/settings/account',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+```
+
+## Nested Sidebar Items
+
+Create nested navigation with collapsible groups:
+
+```tsx
+{
+  title: 'Products',
+  icon: Package,
+  items: [
+    {
+      title: 'All Products',
+      url: '/products',
+      icon: List,
+    },
+    {
+      title: 'Categories',
+      url: '/products/categories',
+      icon: Tags,
+    },
+    {
+      title: 'Inventory',
+      url: '/products/inventory',
+      icon: Warehouse,
+    },
+  ],
+}
+```
+
+## Adding Badges to Navigation Items
+
+Highlight navigation items with badges:
+
+```tsx
+{
+  title: 'Messages',
+  url: '/messages',
+  icon: MessageSquare,
+  badge: '5', // Shows a badge with "5"
+}
+
+{
+  title: 'Notifications',
+  url: '/notifications',
+  icon: Bell,
+  badge: '12',
+}
+```
+
+## Layout Integration
+
+The authenticated layout wraps all protected pages. From `src/components/layout/authenticated-layout.tsx:1-43`:
+
+```tsx
+import { Outlet } from '@tanstack/react-router'
+import { getCookie } from '@/lib/cookies'
+import { LayoutProvider } from '@/context/layout-provider'
+import { SearchProvider } from '@/context/search-provider'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { AppSidebar } from '@/components/layout/app-sidebar'
+import { SkipToMain } from '@/components/skip-to-main'
+
+export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
+  const defaultOpen = getCookie('sidebar_state') !== 'false'
+  return (
+    <SearchProvider>
+      <LayoutProvider>
+        <SidebarProvider defaultOpen={defaultOpen}>
+          <SkipToMain />
+          <AppSidebar />
+          <SidebarInset className='@container/content'>
+            {children ?? <Outlet />}
+          </SidebarInset>
+        </SidebarProvider>
+      </LayoutProvider>
+    </SearchProvider>
+  )
+}
+```
+
+## Complete Example: Adding a Projects Page
+
+Here's a complete example of adding a new projects page:
+
+<Steps>
+  <Step title="Create Feature Component">
+    ```tsx
+    // src/features/projects/index.tsx
+    export function Projects() {
+      return (
+        <div className="flex flex-col gap-6 p-6">
+          <div>
+            <h1 className="text-3xl font-bold">Projects</h1>
+            <p className="text-muted-foreground">
+              Manage your projects and track progress
+            </p>
+          </div>
+          
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* Project cards here */}
+          </div>
+        </div>
+      )
+    }
+    ```
+  </Step>
+  
+  <Step title="Create Route File">
+    ```tsx
+    // src/routes/_authenticated/projects/index.tsx
+    import { createFileRoute } from '@tanstack/react-router'
+import { Projects } from '@/features/projects'
+    
+    export const Route = createFileRoute('/_authenticated/projects/')({
+      component: Projects,
+    })
+    ```
+  </Step>
+  
+  <Step title="Add to Sidebar">
+    ```tsx
+    // src/components/layout/data/sidebar-data.ts
+    import { FolderKanban } from 'lucide-react'
+    
+    export const sidebarData: SidebarData = {
+      navGroups: [
+        {
+          title: 'General',
+          items: [
+            // ... other items
+            {
+              title: 'Projects',
+              url: '/projects',
+              icon: FolderKanban,
+            },
+          ],
+        },
+      ],
+    }
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+When creating new routes, TanStack Router automatically handles code splitting and lazy loading, ensuring optimal performance.
+</Tip>
+
+## Route Groups
+
+Use parentheses for route grouping without affecting the URL:
+
+```tsx
+// src/routes/(auth)/sign-in.tsx
+// URL: /sign-in (parentheses are ignored)
+
+export const Route = createFileRoute('/(auth)/sign-in')({
+  component: SignIn,
+})
+```
+
+This is useful for organizing related routes that share common characteristics but don't need a URL segment.
+
+<Note>
+All routes under `_authenticated/` automatically require authentication and inherit the authenticated layout with sidebar navigation.
+</Note>

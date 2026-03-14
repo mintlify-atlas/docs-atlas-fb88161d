@@ -1,0 +1,483 @@
+---
+title: Authentication
+description: Pre-built auth pages and Clerk integration support
+icon: shield-check
+---
+
+Shadcn Admin includes a complete set of authentication pages with form validation, and optional Clerk integration for production-ready authentication.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Pre-built Auth Pages" icon="file-lines">
+    Sign in, sign up, OTP, and forgot password pages
+  </Card>
+  <Card title="Clerk Integration" icon="shield">
+    Optional Clerk integration for managed auth
+  </Card>
+  <Card title="Form Validation" icon="check-circle">
+    Zod schema validation with react-hook-form
+  </Card>
+  <Card title="Protected Routes" icon="lock">
+    Route guards and auth state management
+  </Card>
+</CardGroup>
+
+## Auth Pages
+
+Shadcn Admin includes several pre-built authentication pages:
+
+- **Sign In** - Standard login form with email/password
+- **Sign In (2 Column)** - Login with image sidebar
+- **Sign Up** - User registration form
+- **Forgot Password** - Password reset flow
+- **OTP** - One-time password verification
+
+## Sign In Form
+
+The main sign-in implementation with validation:
+
+```tsx src/features/auth/sign-in/components/user-auth-form.tsx
+import { useState } from 'react'
+import { z } from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Loader2, LogIn } from 'lucide-react'
+import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth-store'
+import { Button } from '@/components/ui/button'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/password-input'
+
+const formSchema = z.object({
+  email: z.email({
+    error: (iss) => (iss.input === '' ? 'Please enter your email' : undefined),
+  }),
+  password: z
+    .string()
+    .min(1, 'Please enter your password')
+    .min(7, 'Password must be at least 7 characters long'),
+})
+
+export function UserAuthForm({ redirectTo }: { redirectTo?: string }) {
+  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
+  const { auth } = useAuthStore()
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
+
+  function onSubmit(data: z.infer<typeof formSchema>) {
+    setIsLoading(true)
+
+    toast.promise(sleep(2000), {
+      loading: 'Signing in...',
+      success: () => {
+        setIsLoading(false)
+
+        // Mock successful authentication
+        const mockUser = {
+          accountNo: 'ACC001',
+          email: data.email,
+          role: ['user'],
+          exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+        }
+
+        auth.setUser(mockUser)
+        auth.setAccessToken('mock-access-token')
+
+        // Redirect to stored location or dashboard
+        const targetPath = redirectTo || '/'
+        navigate({ to: targetPath, replace: true })
+
+        return `Welcome back, ${data.email}!`
+      },
+      error: 'Error',
+    })
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="name@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem className="relative">
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <PasswordInput placeholder="********" {...field} />
+              </FormControl>
+              <FormMessage />
+              <Link
+                to="/forgot-password"
+                className="absolute end-0 -top-0.5 text-sm font-medium text-muted-foreground hover:opacity-75"
+              >
+                Forgot password?
+              </Link>
+            </FormItem>
+          )}
+        />
+        
+        <Button className="mt-2" disabled={isLoading}>
+          {isLoading ? <Loader2 className="animate-spin" /> : <LogIn />}
+          Sign in
+        </Button>
+
+        <div className="relative my-2">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" type="button" disabled={isLoading}>
+            <IconGithub className="h-4 w-4" /> GitHub
+          </Button>
+          <Button variant="outline" type="button" disabled={isLoading}>
+            <IconFacebook className="h-4 w-4" /> Facebook
+          </Button>
+        </div>
+      </form>
+    </Form>
+  )
+}
+```
+
+## Auth Layout
+
+Consistent layout wrapper for all auth pages:
+
+```tsx src/features/auth/auth-layout.tsx
+import { Logo } from '@/assets/logo'
+
+export function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="container grid h-svh max-w-none items-center justify-center">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-2 py-8 sm:w-[480px] sm:p-8">
+        <div className="mb-4 flex items-center justify-center">
+          <Logo className="me-2" />
+          <h1 className="text-xl font-medium">Shadcn Admin</h1>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+```
+
+## Form Validation
+
+All auth forms use Zod for schema validation:
+
+```tsx
+import { z } from 'zod'
+
+// Sign in validation
+const signInSchema = z.object({
+  email: z.email('Please enter a valid email'),
+  password: z.string().min(7, 'Password must be at least 7 characters'),
+})
+
+// Sign up validation
+const signUpSchema = z.object({
+  email: z.email('Please enter a valid email'),
+  password: z.string().min(7, 'Password must be at least 7 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+})
+
+// OTP validation
+const otpSchema = z.object({
+  pin: z.string().min(6, 'OTP must be 6 digits').max(6),
+})
+
+// Forgot password validation
+const forgotPasswordSchema = z.object({
+  email: z.email('Please enter a valid email'),
+})
+```
+
+## Auth State Management
+
+Manage authentication state with Zustand:
+
+```tsx
+import { useAuthStore } from '@/stores/auth-store'
+
+function MyComponent() {
+  const { auth } = useAuthStore()
+  
+  // Sign in
+  auth.setUser({
+    accountNo: 'ACC001',
+    email: 'user@example.com',
+    role: ['user'],
+    exp: Date.now() + 24 * 60 * 60 * 1000,
+  })
+  auth.setAccessToken('token')
+  
+  // Check auth status
+  const isAuthenticated = !!auth.user
+  
+  // Sign out
+  auth.clearAuth()
+}
+```
+
+## Protected Routes
+
+Protect routes that require authentication:
+
+```tsx
+import { useAuthStore } from '@/stores/auth-store'
+import { Navigate } from '@tanstack/react-router'
+
+function ProtectedRoute({ children }) {
+  const { auth } = useAuthStore()
+  
+  if (!auth.user) {
+    return <Navigate to="/sign-in" />
+  }
+  
+  return children
+}
+```
+
+## Clerk Integration
+
+Shadcn Admin supports Clerk for managed authentication:
+
+### Clerk Sign In Page
+
+```tsx
+import { SignIn } from '@clerk/clerk-react'
+
+export function ClerkSignInPage() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <SignIn
+        appearance={{
+          elements: {
+            rootBox: 'mx-auto',
+            card: 'shadow-none',
+          },
+        }}
+      />
+    </div>
+  )
+}
+```
+
+### Clerk Sign Up Page
+
+```tsx
+import { SignUp } from '@clerk/clerk-react'
+
+export function ClerkSignUpPage() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <SignUp
+        appearance={{
+          elements: {
+            rootBox: 'mx-auto',
+            card: 'shadow-none',
+          },
+        }}
+      />
+    </div>
+  )
+}
+```
+
+### Clerk User Management
+
+```tsx
+import { UserProfile } from '@clerk/clerk-react'
+
+export function ClerkUserManagement() {
+  return (
+    <div className="container py-8">
+      <UserProfile />
+    </div>
+  )
+}
+```
+
+## OAuth Providers
+
+Add social authentication buttons:
+
+```tsx
+import { IconGithub, IconGoogle, IconFacebook } from '@/assets/brand-icons'
+
+<div className="grid grid-cols-2 gap-2">
+  <Button variant="outline" onClick={() => signInWithGitHub()}>
+    <IconGithub className="h-4 w-4" /> GitHub
+  </Button>
+  <Button variant="outline" onClick={() => signInWithGoogle()}>
+    <IconGoogle className="h-4 w-4" /> Google
+  </Button>
+</div>
+```
+
+## Password Input Component
+
+Toggleable password visibility:
+
+```tsx
+import { PasswordInput } from '@/components/password-input'
+
+<PasswordInput
+  placeholder="Enter password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+/>
+```
+
+## Redirect After Login
+
+Handle post-login redirects:
+
+```tsx
+const navigate = useNavigate()
+const search = useSearch() // Get redirect param from URL
+
+function onSubmit(data) {
+  // Authenticate user
+  auth.setUser(user)
+  
+  // Redirect to intended page or dashboard
+  const redirectTo = search.redirect || '/'
+  navigate({ to: redirectTo, replace: true })
+}
+```
+
+## Session Expiry
+
+Check token expiration:
+
+```tsx
+const { auth } = useAuthStore()
+
+function isSessionValid() {
+  if (!auth.user?.exp) return false
+  return Date.now() < auth.user.exp
+}
+
+function useSessionCheck() {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isSessionValid()) {
+        auth.clearAuth()
+        navigate({ to: '/sign-in' })
+        toast.error('Session expired. Please sign in again.')
+      }
+    }, 60000) // Check every minute
+    
+    return () => clearInterval(interval)
+  }, [auth.user])
+}
+```
+
+## Toast Notifications
+
+Provide feedback during auth flows:
+
+```tsx
+import { toast } from 'sonner'
+
+// Success
+toast.success('Signed in successfully!')
+
+// Error
+toast.error('Invalid credentials')
+
+// Promise-based
+toast.promise(signIn(), {
+  loading: 'Signing in...',
+  success: 'Welcome back!',
+  error: 'Failed to sign in',
+})
+```
+
+## Available Auth Routes
+
+<CardGroup cols={2}>
+  <Card title="/sign-in" icon="arrow-right-to-bracket">
+    Standard sign in form
+  </Card>
+  <Card title="/sign-in-2" icon="columns">
+    Two-column sign in with image
+  </Card>
+  <Card title="/sign-up" icon="user-plus">
+    User registration form
+  </Card>
+  <Card title="/forgot-password" icon="key">
+    Password reset request
+  </Card>
+  <Card title="/otp" icon="hashtag">
+    One-time password verification
+  </Card>
+  <Card title="/clerk/sign-in" icon="shield">
+    Clerk sign in page
+  </Card>
+  <Card title="/clerk/sign-up" icon="shield">
+    Clerk sign up page
+  </Card>
+  <Card title="/clerk/user-management" icon="user-gear">
+    Clerk user profile
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Secure Password Requirements">
+    Enforce minimum length and complexity rules
+  </Step>
+  <Step title="Implement Rate Limiting">
+    Prevent brute force attacks on auth endpoints
+  </Step>
+  <Step title="Store Tokens Securely">
+    Use httpOnly cookies or secure storage for tokens
+  </Step>
+  <Step title="Validate on Both Sides">
+    Always validate on both client and server
+  </Step>
+  <Step title="Handle Session Expiry">
+    Automatically refresh or prompt re-authentication
+  </Step>
+</Steps>
+
+<Warning>
+  The included auth implementation is for demonstration purposes. For production, use a secure auth provider like Clerk, Auth0, or implement proper backend validation.
+</Warning>

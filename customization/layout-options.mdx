@@ -1,0 +1,333 @@
+---
+title: Layout Options
+description: Configure sidebar variants, collapsible modes, and layout persistence in Shadcn Admin
+---
+
+Shadcn Admin provides flexible layout customization options through the Config Drawer, allowing you to adjust the sidebar and layout to match your preferences. All settings are automatically persisted using cookies.
+
+## Available Configuration Options
+
+The layout system supports three main configuration areas:
+
+<CardGroup cols={3}>
+  <Card title="Sidebar Variants" icon="sidebar">
+    Choose between inset, floating, or standard sidebar styles
+  </Card>
+  <Card title="Layout Modes" icon="layout-dashboard">
+    Toggle between default, compact, and full layout modes
+  </Card>
+  <Card title="Persistence" icon="cookie">
+    Settings are saved automatically using cookies
+  </Card>
+</CardGroup>
+
+## Sidebar Variants
+
+The application supports three sidebar variants, each providing a different visual style:
+
+### Available Variants
+
+<Steps>
+  <Step title="Inset Sidebar">
+    The sidebar is inset with padding around it, creating a modern floating appearance within the application frame.
+    
+    ```tsx
+    const { setVariant } = useLayout()
+    setVariant('inset')
+    ```
+  </Step>
+  
+  <Step title="Floating Sidebar">
+    The sidebar floats above the content with a subtle shadow, providing clear visual separation.
+    
+    ```tsx
+    const { setVariant } = useLayout()
+    setVariant('floating')
+    ```
+  </Step>
+  
+  <Step title="Standard Sidebar">
+    A traditional sidebar that sits flush against the edge of the viewport.
+    
+    ```tsx
+    const { setVariant } = useLayout()
+    setVariant('sidebar')
+    ```
+  </Step>
+</Steps>
+
+### Configuration Code
+
+The sidebar variant configuration is implemented in `src/components/config-drawer.tsx:213-254`:
+
+```tsx
+function SidebarConfig() {
+  const { defaultVariant, variant, setVariant } = useLayout()
+  return (
+    <div className='max-md:hidden'>
+      <SectionTitle
+        title='Sidebar'
+        showReset={defaultVariant !== variant}
+        onReset={() => setVariant(defaultVariant)}
+      />
+      <Radio
+        value={variant}
+        onValueChange={setVariant}
+        className='grid w-full max-w-md grid-cols-3 gap-4'
+        aria-label='Select sidebar style'
+      >
+        {[
+          { value: 'inset', label: 'Inset', icon: IconSidebarInset },
+          { value: 'floating', label: 'Floating', icon: IconSidebarFloating },
+          { value: 'sidebar', label: 'Sidebar', icon: IconSidebarSidebar },
+        ].map((item) => (
+          <RadioGroupItem key={item.value} item={item} />
+        ))}
+      </Radio>
+    </div>
+  )
+}
+```
+
+## Layout Modes
+
+Control how the sidebar behaves with three distinct layout modes:
+
+<CodeGroup>
+```tsx Default Layout
+// Sidebar is fully expanded showing icons and labels
+const { setOpen, setCollapsible } = useSidebar()
+const { setCollapsible: setLayoutCollapsible } = useLayout()
+
+setOpen(true) // Expand the sidebar
+```
+
+```tsx Compact Layout
+// Sidebar shows only icons (icon-only mode)
+const { setOpen } = useSidebar()
+const { setCollapsible } = useLayout()
+
+setOpen(false)
+setCollapsible('icon')
+```
+
+```tsx Full Layout
+// Sidebar is completely hidden (offcanvas)
+const { setOpen } = useSidebar()
+const { setCollapsible } = useLayout()
+
+setOpen(false)
+setCollapsible('offcanvas')
+```
+</CodeGroup>
+
+### Layout Configuration Component
+
+From `src/components/config-drawer.tsx:257-312`:
+
+```tsx
+function LayoutConfig() {
+  const { open, setOpen } = useSidebar()
+  const { defaultCollapsible, collapsible, setCollapsible } = useLayout()
+
+  const radioState = open ? 'default' : collapsible
+
+  return (
+    <div className='max-md:hidden'>
+      <SectionTitle
+        title='Layout'
+        showReset={radioState !== 'default'}
+        onReset={() => {
+          setOpen(true)
+          setCollapsible(defaultCollapsible)
+        }}
+      />
+      <Radio
+        value={radioState}
+        onValueChange={(v) => {
+          if (v === 'default') {
+            setOpen(true)
+            return
+          }
+          setOpen(false)
+          setCollapsible(v as Collapsible)
+        }}
+      >
+        {[
+          { value: 'default', label: 'Default', icon: IconLayoutDefault },
+          { value: 'icon', label: 'Compact', icon: IconLayoutCompact },
+          { value: 'offcanvas', label: 'Full layout', icon: IconLayoutFull },
+        ].map((item) => (
+          <RadioGroupItem key={item.value} item={item} />
+        ))}
+      </Radio>
+    </div>
+  )
+}
+```
+
+## Layout Persistence
+
+All layout settings are automatically persisted using cookies with a 7-day expiration. This ensures users' preferences are maintained across sessions.
+
+### Cookie Configuration
+
+From `src/context/layout-provider.tsx:1-86`:
+
+```tsx
+const LAYOUT_COLLAPSIBLE_COOKIE_NAME = 'layout_collapsible'
+const LAYOUT_VARIANT_COOKIE_NAME = 'layout_variant'
+const LAYOUT_COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
+
+const DEFAULT_VARIANT = 'inset'
+const DEFAULT_COLLAPSIBLE = 'icon'
+
+export function LayoutProvider({ children }: LayoutProviderProps) {
+  const [collapsible, _setCollapsible] = useState<Collapsible>(() => {
+    const saved = getCookie(LAYOUT_COLLAPSIBLE_COOKIE_NAME)
+    return (saved as Collapsible) || DEFAULT_COLLAPSIBLE
+  })
+
+  const [variant, _setVariant] = useState<Variant>(() => {
+    const saved = getCookie(LAYOUT_VARIANT_COOKIE_NAME)
+    return (saved as Variant) || DEFAULT_VARIANT
+  })
+
+  const setCollapsible = (newCollapsible: Collapsible) => {
+    _setCollapsible(newCollapsible)
+    setCookie(
+      LAYOUT_COLLAPSIBLE_COOKIE_NAME,
+      newCollapsible,
+      LAYOUT_COOKIE_MAX_AGE
+    )
+  }
+
+  const setVariant = (newVariant: Variant) => {
+    _setVariant(newVariant)
+    setCookie(LAYOUT_VARIANT_COOKIE_NAME, newVariant, LAYOUT_COOKIE_MAX_AGE)
+  }
+
+  return <LayoutContext value={contextValue}>{children}</LayoutContext>
+}
+```
+
+## Using the Config Drawer
+
+The Config Drawer provides a real-time preview interface for adjusting all layout settings:
+
+<Steps>
+  <Step title="Open Config Drawer">
+    Click the settings icon (gear icon) in the application header to open the configuration drawer.
+  </Step>
+  
+  <Step title="Adjust Settings">
+    Select your preferred sidebar variant, layout mode, and theme. Changes are applied immediately.
+  </Step>
+  
+  <Step title="Reset to Defaults">
+    Click the "Reset" button at the bottom of the drawer to restore all settings to their default values.
+  </Step>
+</Steps>
+
+### Config Drawer Implementation
+
+From `src/components/config-drawer.tsx:30-81`:
+
+```tsx
+export function ConfigDrawer() {
+  const { setOpen } = useSidebar()
+  const { resetDir } = useDirection()
+  const { resetTheme } = useTheme()
+  const { resetLayout } = useLayout()
+
+  const handleReset = () => {
+    setOpen(true)
+    resetDir()
+    resetTheme()
+    resetLayout()
+  }
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          size='icon'
+          variant='ghost'
+          aria-label='Open theme settings'
+        >
+          <Settings aria-hidden='true' />
+        </Button>
+      </SheetTrigger>
+      <SheetContent className='flex flex-col'>
+        <SheetHeader className='pb-0 text-start'>
+          <SheetTitle>Theme Settings</SheetTitle>
+          <SheetDescription>
+            Adjust the appearance and layout to suit your preferences.
+          </SheetDescription>
+        </SheetHeader>
+        <div className='space-y-6 overflow-y-auto px-4'>
+          <ThemeConfig />
+          <SidebarConfig />
+          <LayoutConfig />
+          <DirConfig />
+        </div>
+        <SheetFooter className='gap-2'>
+          <Button variant='destructive' onClick={handleReset}>
+            Reset
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  )
+}
+```
+
+## TypeScript Types
+
+The layout system uses TypeScript for type safety:
+
+```tsx
+export type Collapsible = 'offcanvas' | 'icon' | 'none'
+export type Variant = 'inset' | 'sidebar' | 'floating'
+
+type LayoutContextType = {
+  resetLayout: () => void
+  defaultCollapsible: Collapsible
+  collapsible: Collapsible
+  setCollapsible: (collapsible: Collapsible) => void
+  defaultVariant: Variant
+  variant: Variant
+  setVariant: (variant: Variant) => void
+}
+```
+
+<Note>
+Layout settings on mobile devices are simplified. The sidebar automatically adapts to a mobile-friendly overlay pattern, and some configuration options are hidden on smaller screens.
+</Note>
+
+## Programmatic Configuration
+
+You can also configure layout settings programmatically in your components:
+
+```tsx
+import { useLayout } from '@/context/layout-provider'
+import { useSidebar } from '@/components/ui/sidebar'
+
+function MyComponent() {
+  const { variant, setVariant, collapsible, setCollapsible } = useLayout()
+  const { open, setOpen } = useSidebar()
+
+  // Set inset variant with compact layout
+  const applyCompactLayout = () => {
+    setVariant('inset')
+    setCollapsible('icon')
+    setOpen(false)
+  }
+
+  return (
+    <button onClick={applyCompactLayout}>
+      Switch to Compact Layout
+    </button>
+  )
+}
+```

@@ -1,0 +1,405 @@
+---
+title: Theme Switch
+description: Dropdown menu for switching between light, dark, and system themes with automatic meta tag updates.
+---
+
+The `ThemeSwitch` component provides a user-friendly dropdown menu for selecting the application theme. It automatically updates the theme-color meta tag and displays visual indicators for the active theme.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Three Theme Modes" icon="palette">
+    Light, dark, and system preference options
+  </Card>
+  <Card title="Meta Tag Updates" icon="code">
+    Automatically updates theme-color meta tag
+  </Card>
+  <Card title="Visual Indicators" icon="check">
+    Shows checkmark for active theme
+  </Card>
+  <Card title="Animated Icons" icon="sparkles">
+    Smooth sun/moon icon transitions
+  </Card>
+</CardGroup>
+
+## Usage
+
+```tsx
+import { ThemeSwitch } from '@/components/theme-switch'
+
+export function Header() {
+  return (
+    <header>
+      <nav>
+        {/* Other header content */}
+        <ThemeSwitch />
+      </nav>
+    </header>
+  )
+}
+```
+
+## Implementation
+
+```tsx src/components/theme-switch.tsx
+import { useEffect } from 'react'
+import { Check, Moon, Sun } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useTheme } from '@/context/theme-provider'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+export function ThemeSwitch() {
+  const { theme, setTheme } = useTheme()
+
+  /* Update theme-color meta tag
+   * when theme is updated */
+  useEffect(() => {
+    const themeColor = theme === 'dark' ? '#020817' : '#fff'
+    const metaThemeColor = document.querySelector("meta[name='theme-color']")
+    if (metaThemeColor) metaThemeColor.setAttribute('content', themeColor)
+  }, [theme])
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant='ghost' size='icon' className='scale-95 rounded-full'>
+          <Sun className='size-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90' />
+          <Moon className='absolute size-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0' />
+          <span className='sr-only'>Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='end'>
+        <DropdownMenuItem onClick={() => setTheme('light')}>
+          Light{' '}
+          <Check
+            size={14}
+            className={cn('ms-auto', theme !== 'light' && 'hidden')}
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme('dark')}>
+          Dark
+          <Check
+            size={14}
+            className={cn('ms-auto', theme !== 'dark' && 'hidden')}
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme('system')}>
+          System
+          <Check
+            size={14}
+            className={cn('ms-auto', theme !== 'system' && 'hidden')}
+          />
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+```
+
+## Theme Context
+
+The component uses the `ThemeProvider` context:
+
+```tsx
+import { useTheme } from '@/context/theme-provider'
+
+const { theme, setTheme } = useTheme()
+```
+
+### Available Values
+
+<ParamField path="theme" type="'light' | 'dark' | 'system'">
+  Current active theme setting
+</ParamField>
+
+<ParamField path="setTheme" type="(theme: string) => void">
+  Function to update the theme
+</ParamField>
+
+## Theme Options
+
+### Light Theme
+
+```tsx
+<DropdownMenuItem onClick={() => setTheme('light')}>
+  Light
+</DropdownMenuItem>
+```
+
+Sets the application to light mode with white backgrounds and dark text.
+
+### Dark Theme
+
+```tsx
+<DropdownMenuItem onClick={() => setTheme('dark')}>
+  Dark
+</DropdownMenuItem>
+```
+
+Sets the application to dark mode with dark backgrounds and light text.
+
+### System Theme
+
+```tsx
+<DropdownMenuItem onClick={() => setTheme('system')}>
+  System
+</DropdownMenuItem>
+```
+
+Follows the user's operating system theme preference. Automatically switches between light and dark based on OS settings.
+
+## Meta Tag Updates
+
+The component automatically updates the `theme-color` meta tag when the theme changes:
+
+```tsx
+useEffect(() => {
+  const themeColor = theme === 'dark' ? '#020817' : '#fff'
+  const metaThemeColor = document.querySelector("meta[name='theme-color']")
+  if (metaThemeColor) metaThemeColor.setAttribute('content', themeColor)
+}, [theme])
+```
+
+**Color values:**
+- **Dark theme**: `#020817` (slate-950)
+- **Light theme**: `#fff` (white)
+
+This updates the browser chrome color on mobile devices.
+
+## Icon Animations
+
+The trigger button features animated sun/moon icons:
+
+```tsx
+<Sun className='size-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90' />
+<Moon className='absolute size-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0' />
+```
+
+**Animation behavior:**
+- **Light mode**: Sun icon visible (scale 100%, rotate 0°), Moon hidden (scale 0%, rotate 90°)
+- **Dark mode**: Sun hidden (scale 0%, rotate -90°), Moon visible (scale 100%, rotate 0°)
+- **Transition**: Smooth scale and rotation transitions
+
+## Active Indicator
+
+Each menu item shows a checkmark when active:
+
+```tsx
+<Check
+  size={14}
+  className={cn('ms-auto', theme !== 'light' && 'hidden')}
+/>
+```
+
+The check icon:
+- Positioned at `ms-auto` (margin-inline-start: auto, right-aligned in LTR)
+- Size 14px
+- Hidden when not the active theme
+
+## Dropdown Configuration
+
+```tsx
+<DropdownMenu modal={false}>
+```
+
+The `modal={false}` prop allows interaction with other UI elements while the dropdown is open.
+
+```tsx
+<DropdownMenuContent align='end'>
+```
+
+The `align='end'` prop aligns the dropdown to the right edge of the trigger button.
+
+## Accessibility
+
+### Screen Reader Support
+
+```tsx
+<span className='sr-only'>Toggle theme</span>
+```
+
+Provides a descriptive label for screen readers.
+
+### Keyboard Navigation
+
+- **Space/Enter**: Open dropdown menu
+- **Arrow keys**: Navigate menu items
+- **Enter**: Select theme
+- **Escape**: Close dropdown
+
+### ARIA Attributes
+
+The DropdownMenu component automatically handles:
+- `aria-expanded` state
+- `aria-haspopup` attribute
+- Focus management
+
+## Styling
+
+### Button Styling
+
+```tsx
+variant='ghost' 
+size='icon' 
+className='scale-95 rounded-full'
+```
+
+- **Ghost variant**: Transparent background with hover effect
+- **Icon size**: 40x40px square button
+- **Scale 95%**: Slightly smaller than default
+- **Rounded full**: Circular button shape
+
+### Icon Size
+
+Icons use a custom size:
+
+```tsx
+className='size-[1.2rem]' // 19.2px
+```
+
+### Moon Icon Scaling
+
+```tsx
+<Moon className='scale-90' /> // In menu item, slightly smaller
+```
+
+## Examples
+
+### In Header Navigation
+
+```tsx
+import { ThemeSwitch } from '@/components/theme-switch'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+
+function HeaderActions() {
+  return (
+    <div className="flex items-center gap-2">
+      <ThemeSwitch />
+      <ProfileDropdown />
+    </div>
+  )
+}
+```
+
+### With Custom Icons
+
+Replace the default icons:
+
+```tsx
+import { Lightbulb, Moon } from 'lucide-react'
+
+<DropdownMenuTrigger asChild>
+  <Button variant='ghost' size='icon'>
+    <Lightbulb className='rotate-0 scale-100 transition-all dark:scale-0' />
+    <Moon className='absolute scale-0 transition-all dark:scale-100' />
+  </Button>
+</DropdownMenuTrigger>
+```
+
+### With Labels
+
+Add text labels to the button:
+
+```tsx
+<Button variant='ghost' className='gap-2'>
+  <Sun className='h-4 w-4 rotate-0 scale-100 transition-all dark:scale-0' />
+  <Moon className='absolute h-4 w-4 scale-0 transition-all dark:scale-100' />
+  <span>Theme</span>
+</Button>
+```
+
+### Programmatic Theme Change
+
+Change theme from anywhere in your app:
+
+```tsx
+import { useTheme } from '@/context/theme-provider'
+
+function AutoThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  
+  useEffect(() => {
+    const hour = new Date().getHours()
+    // Auto dark mode from 8 PM to 6 AM
+    if (hour >= 20 || hour < 6) {
+      setTheme('dark')
+    } else {
+      setTheme('light')
+    }
+  }, [])
+  
+  return null
+}
+```
+
+## RTL Support
+
+The component uses logical properties for RTL compatibility:
+
+```tsx
+className='ms-auto' // margin-inline-start: auto
+```
+
+In RTL mode, the checkmark appears on the left side of menu items.
+
+## Customization
+
+### Custom Theme Colors
+
+Modify the meta tag colors:
+
+```tsx
+useEffect(() => {
+  const themeColor = theme === 'dark' 
+    ? '#1e293b'  // Custom dark color
+    : '#f8fafc'  // Custom light color
+  const metaThemeColor = document.querySelector("meta[name='theme-color']")
+  if (metaThemeColor) metaThemeColor.setAttribute('content', themeColor)
+}, [theme])
+```
+
+### Disable Modal Behavior
+
+Change dropdown behavior:
+
+```tsx
+<DropdownMenu modal={true}> {/* Prevents interaction with page */}
+```
+
+### Different Alignment
+
+```tsx
+<DropdownMenuContent align='start'> {/* Left-aligned */}
+<DropdownMenuContent align='center'> {/* Center-aligned */}
+```
+
+## Comparison with Config Drawer
+
+| Feature | ThemeSwitch | ConfigDrawer |
+|---------|-------------|-------------|
+| **Purpose** | Quick theme toggle | Comprehensive settings |
+| **Location** | Header/navbar | Settings panel |
+| **Settings** | Theme only | Theme, sidebar, layout, direction |
+| **UI** | Dropdown menu | Sheet drawer |
+| **Persistence** | ThemeProvider | Multiple providers |
+
+**Use ThemeSwitch when:**
+- You want a compact theme toggle in the header
+- Theme is the primary customization option
+- Space is limited
+
+**Use ConfigDrawer when:**
+- You have multiple customization options
+- You want to group all settings together
+- You have space for a settings button
+
+## Related Components
+
+- [Config Drawer](/components/config-drawer) - Comprehensive settings including theme
+- [Command Menu](/components/command-menu) - Includes theme switching commands

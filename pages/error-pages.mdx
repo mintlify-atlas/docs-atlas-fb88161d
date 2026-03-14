@@ -1,0 +1,449 @@
+---
+title: Error Pages
+description: Pre-built error pages for common HTTP status codes and maintenance mode
+icon: 'triangle-alert'
+---
+
+The Error Pages feature provides pre-designed error pages for common HTTP status codes (401, 403, 404, 500) and a maintenance mode page, all with consistent styling and navigation actions.
+
+## Overview
+
+Error pages are located in `src/features/errors/` and provide user-friendly feedback for various error states with appropriate actions.
+
+## Available Error Pages
+
+<CardGroup cols={2}>
+  <Card title="404 - Not Found" icon="search-x">
+    Page or resource does not exist
+  </Card>
+  <Card title="401 - Unauthorized" icon="lock">
+    Authentication required to access resource
+  </Card>
+  <Card title="403 - Forbidden" icon="shield-x">
+    Insufficient permissions to view resource
+  </Card>
+  <Card title="500 - Server Error" icon="server-crash">
+    Internal server error occurred
+  </Card>
+  <Card title="503 - Maintenance" icon="wrench">
+    Website temporarily unavailable
+  </Card>
+</CardGroup>
+
+## Common Pattern
+
+All error pages follow a consistent structure:
+
+<Steps>
+  <Step title="Large status code">
+    Bold, prominent display of the HTTP status code
+  </Step>
+  
+  <Step title="Clear message">
+    User-friendly description of what went wrong
+  </Step>
+  
+  <Step title="Action buttons">
+    Options to navigate away or retry (Go Back, Back to Home)
+  </Step>
+</Steps>
+
+## 404 - Not Found Error
+
+Displays when a requested page doesn't exist:
+
+```tsx src/features/errors/not-found-error.tsx
+import { useNavigate, useRouter } from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
+
+export function NotFoundError() {
+  const navigate = useNavigate()
+  const { history } = useRouter()
+  
+  return (
+    <div className='h-svh'>
+      <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
+        <h1 className='text-[7rem] leading-tight font-bold'>404</h1>
+        <span className='font-medium'>Oops! Page Not Found!</span>
+        <p className='text-center text-muted-foreground'>
+          It seems like the page you're looking for <br />
+          does not exist or might have been removed.
+        </p>
+        <div className='mt-6 flex gap-4'>
+          <Button variant='outline' onClick={() => history.go(-1)}>
+            Go Back
+          </Button>
+          <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+**Use case:** Invalid routes, deleted content, broken links
+
+## 401 - Unauthorized Error
+
+Displays when authentication is required:
+
+```tsx src/features/errors/unauthorized-error.tsx
+export function UnauthorisedError() {
+  const navigate = useNavigate()
+  const { history } = useRouter()
+  
+  return (
+    <div className='h-svh'>
+      <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
+        <h1 className='text-[7rem] leading-tight font-bold'>401</h1>
+        <span className='font-medium'>Unauthorized Access</span>
+        <p className='text-center text-muted-foreground'>
+          Please log in with the appropriate credentials <br />
+          to access this resource.
+        </p>
+        <div className='mt-6 flex gap-4'>
+          <Button variant='outline' onClick={() => history.go(-1)}>
+            Go Back
+          </Button>
+          <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+**Use case:** Unauthenticated users accessing protected routes
+
+## 403 - Forbidden Error
+
+Displays when user lacks necessary permissions:
+
+```tsx src/features/errors/forbidden.tsx
+export function ForbiddenError() {
+  const navigate = useNavigate()
+  const { history } = useRouter()
+  
+  return (
+    <div className='h-svh'>
+      <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
+        <h1 className='text-[7rem] leading-tight font-bold'>403</h1>
+        <span className='font-medium'>Access Forbidden</span>
+        <p className='text-center text-muted-foreground'>
+          You don't have necessary permission <br />
+          to view this resource.
+        </p>
+        <div className='mt-6 flex gap-4'>
+          <Button variant='outline' onClick={() => history.go(-1)}>
+            Go Back
+          </Button>
+          <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+**Use case:** Authenticated users accessing resources they don't have permission for
+
+## 500 - General Error
+
+Displays for internal server errors:
+
+```tsx src/features/errors/general-error.tsx
+type GeneralErrorProps = React.HTMLAttributes<HTMLDivElement> & {
+  minimal?: boolean
+}
+
+export function GeneralError({
+  className,
+  minimal = false,
+}: GeneralErrorProps) {
+  const navigate = useNavigate()
+  const { history } = useRouter()
+  
+  return (
+    <div className={cn('h-svh w-full', className)}>
+      <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
+        {!minimal && (
+          <h1 className='text-[7rem] leading-tight font-bold'>500</h1>
+        )}
+        <span className='font-medium'>Oops! Something went wrong {`:')`}</span>
+        <p className='text-center text-muted-foreground'>
+          We apologize for the inconvenience. <br />
+          Please try again later.
+        </p>
+        {!minimal && (
+          <div className='mt-6 flex gap-4'>
+            <Button variant='outline' onClick={() => history.go(-1)}>
+              Go Back
+            </Button>
+            <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+```
+
+**Features:**
+- Optional `minimal` prop to hide status code and buttons
+- Customizable via `className` prop
+- Friendly, apologetic messaging
+
+**Use case:** Server errors, unhandled exceptions, API failures
+
+## 503 - Maintenance Error
+
+Displays during scheduled maintenance:
+
+```tsx src/features/errors/maintenance-error.tsx
+export function MaintenanceError() {
+  return (
+    <div className='h-svh'>
+      <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
+        <h1 className='text-[7rem] leading-tight font-bold'>503</h1>
+        <span className='font-medium'>Website is under maintenance!</span>
+        <p className='text-center text-muted-foreground'>
+          The site is not available at the moment. <br />
+          We'll be back online shortly.
+        </p>
+        <div className='mt-6 flex gap-4'>
+          <Button variant='outline'>Learn more</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+**Use case:** Planned downtime, system upgrades, database migrations
+
+## Navigation Patterns
+
+Error pages use TanStack Router's navigation utilities:
+
+### Browser History Navigation
+
+Go back to the previous page:
+
+```tsx
+const { history } = useRouter()
+
+<Button onClick={() => history.go(-1)}>
+  Go Back
+</Button>
+```
+
+### Programmatic Navigation
+
+Navigate to a specific route:
+
+```tsx
+const navigate = useNavigate()
+
+<Button onClick={() => navigate({ to: '/' })}>
+  Back to Home
+</Button>
+```
+
+### Custom Navigation
+
+Redirect to login or other pages:
+
+```tsx
+<Button onClick={() => navigate({ to: '/sign-in' })}>
+  Log In
+</Button>
+```
+
+## Customization
+
+### Custom Error Messages
+
+Personalize messages for your application:
+
+```tsx
+<p className='text-center text-muted-foreground'>
+  We couldn't find what you're looking for. <br />
+  Try using the search bar or check the URL.
+</p>
+```
+
+### Adding Icons or Images
+
+Enhance visual appeal with icons or illustrations:
+
+```tsx
+import { FileQuestion } from 'lucide-react'
+
+<div className='flex flex-col items-center gap-4'>
+  <div className='flex size-24 items-center justify-center rounded-full bg-muted'>
+    <FileQuestion size={48} className='text-muted-foreground' />
+  </div>
+  <h1 className='text-4xl font-bold'>404</h1>
+  {/* Rest of content */}
+</div>
+```
+
+### Custom Action Buttons
+
+Add more action options:
+
+```tsx
+<div className='mt-6 flex flex-wrap gap-4 justify-center'>
+  <Button variant='outline' onClick={() => history.go(-1)}>
+    Go Back
+  </Button>
+  <Button onClick={() => navigate({ to: '/' })}>
+    Back to Home
+  </Button>
+  <Button variant='ghost' onClick={() => navigate({ to: '/support' })}>
+    Contact Support
+  </Button>
+</div>
+```
+
+### Animated Error Pages
+
+Add animations with Framer Motion:
+
+```tsx
+import { motion } from 'framer-motion'
+
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+  className='flex flex-col items-center'
+>
+  <h1 className='text-[7rem] font-bold'>404</h1>
+  {/* Rest of content */}
+</motion.div>
+```
+
+### Dark Mode Optimized
+
+Ensure error pages work well in both themes:
+
+```tsx
+<div className='bg-background text-foreground'>
+  <h1 className='text-[7rem] font-bold text-primary'>404</h1>
+  <p className='text-muted-foreground'>
+    Page not found
+  </p>
+</div>
+```
+
+## Integration with Router
+
+Set up error boundaries in your router configuration:
+
+```tsx
+// In your route configuration
+export const Route = createRootRoute({
+  component: RootLayout,
+  errorComponent: ({ error }) => {
+    if (error.message.includes('404')) {
+      return <NotFoundError />
+    }
+    if (error.message.includes('403')) {
+      return <ForbiddenError />
+    }
+    return <GeneralError />
+  },
+})
+```
+
+## Best Practices
+
+<Note>
+**User Experience Tips:**
+- Keep messages friendly and non-technical
+- Always provide a way back or forward
+- Use appropriate status codes for SEO
+- Log errors server-side for monitoring
+</Note>
+
+<Warning>
+**Security Considerations:**
+- Don't expose sensitive error details to users
+- Use generic messages for server errors
+- Avoid revealing system architecture
+- Log detailed errors privately
+</Warning>
+
+<Tip>
+**Accessibility:**
+- Ensure proper heading hierarchy
+- Use semantic HTML elements
+- Provide keyboard navigation
+- Include ARIA labels where appropriate
+</Tip>
+
+## Components Used
+
+- `Button` from `@/components/ui/button`
+- `useNavigate`, `useRouter` from `@tanstack/react-router`
+- `cn` utility from `@/lib/utils`
+
+## File Structure
+
+```
+src/features/errors/
+├── not-found-error.tsx       # 404 error page
+├── unauthorized-error.tsx    # 401 error page
+├── forbidden.tsx             # 403 error page
+├── general-error.tsx         # 500 error page (with minimal mode)
+└── maintenance-error.tsx     # 503 maintenance page
+```
+
+## Example Usage
+
+### In Route Configuration
+
+```tsx
+import { NotFoundError } from '@/features/errors/not-found-error'
+
+export const Route = createFileRoute('/_authenticated')({
+  notFoundComponent: NotFoundError,
+})
+```
+
+### Manual Error Handling
+
+```tsx
+import { useNavigate } from '@tanstack/react-router'
+import { ForbiddenError } from '@/features/errors/forbidden'
+
+function ProtectedContent() {
+  const { data, error } = useQuery(...)
+  
+  if (error?.status === 403) {
+    return <ForbiddenError />
+  }
+  
+  return <div>{/* Your content */}</div>
+}
+```
+
+### Conditional Display
+
+```tsx
+function ErrorBoundary({ error }: { error: Error }) {
+  switch (error.status) {
+    case 404:
+      return <NotFoundError />
+    case 401:
+      return <UnauthorisedError />
+    case 403:
+      return <ForbiddenError />
+    case 503:
+      return <MaintenanceError />
+    default:
+      return <GeneralError />
+  }
+}
+```

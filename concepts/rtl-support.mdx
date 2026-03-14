@@ -1,0 +1,563 @@
+---
+title: RTL Support
+description: Built-in support for right-to-left languages with customized components
+icon: languages
+---
+
+Shadcn Admin includes comprehensive RTL (Right-to-Left) support for languages like Arabic, Hebrew, Persian, and Urdu, with specialized component modifications and automatic layout mirroring.
+
+## Overview
+
+RTL support is a first-class feature with:
+
+<CardGroup cols={2}>
+  <Card title="Automatic Mirroring" icon="arrows-left-right">
+    Layout automatically mirrors for RTL languages
+  </Card>
+  
+  <Card title="Custom Components" icon="puzzle-piece">
+    13 UI components specifically enhanced for RTL
+  </Card>
+  
+  <Card title="Direction Provider" icon="code">
+    Built-in direction management with cookie persistence
+  </Card>
+  
+  <Card title="Radix UI Integration" icon="layers">
+    Deep integration with Radix UI's direction system
+  </Card>
+</CardGroup>
+
+## Direction Provider
+
+The `DirectionProvider` manages text direction across the application:
+
+```tsx src/context/direction-provider.tsx
+import { createContext, useContext, useEffect, useState } from 'react'
+import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
+import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+
+export type Direction = 'ltr' | 'rtl'
+
+const DEFAULT_DIRECTION = 'ltr'
+const DIRECTION_COOKIE_NAME = 'dir'
+const DIRECTION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+
+export function DirectionProvider({ children }: { children: React.ReactNode }) {
+  const [dir, _setDir] = useState<Direction>(
+    () => (getCookie(DIRECTION_COOKIE_NAME) as Direction) || DEFAULT_DIRECTION
+  )
+
+  // Apply direction to HTML element
+  useEffect(() => {
+    const htmlElement = document.documentElement
+    htmlElement.setAttribute('dir', dir)
+  }, [dir])
+
+  const setDir = (dir: Direction) => {
+    _setDir(dir)
+    setCookie(DIRECTION_COOKIE_NAME, dir, DIRECTION_COOKIE_MAX_AGE)
+  }
+
+  const resetDir = () => {
+    _setDir(DEFAULT_DIRECTION)
+    removeCookie(DIRECTION_COOKIE_NAME)
+  }
+
+  return (
+    <DirectionContext value={{ defaultDir: DEFAULT_DIRECTION, dir, setDir, resetDir }}>
+      <RdxDirProvider dir={dir}>{children}</RdxDirProvider>
+    </DirectionContext>
+  )
+}
+```
+
+<Note>
+The direction preference is stored in a cookie and persists across sessions.
+</Note>
+
+### Using the Direction Hook
+
+```tsx Using useDirection
+import { useDirection } from '@/context/direction-provider'
+
+function DirectionToggle() {
+  const { dir, setDir } = useDirection()
+  
+  return (
+    <button onClick={() => setDir(dir === 'ltr' ? 'rtl' : 'ltr')}>
+      Current: {dir}
+    </button>
+  )
+}
+```
+
+## Application Setup
+
+The DirectionProvider wraps the entire application:
+
+```tsx src/main.tsx
+import { DirectionProvider } from './context/direction-provider'
+import { ThemeProvider } from './context/theme-provider'
+
+root.render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <FontProvider>
+          <DirectionProvider>
+            <RouterProvider router={router} />
+          </DirectionProvider>
+        </FontProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </StrictMode>
+)
+```
+
+## RTL-Enhanced Components
+
+Shadcn Admin customizes 13 components specifically for RTL support:
+
+### Modified Components
+
+These components have general updates including RTL adjustments:
+
+<Accordion title="scroll-area">
+**Modifications**: Scrollbar positioning adjusted for RTL layouts
+
+```tsx RTL Scrollbar Support
+// Scrollbar appears on left side in RTL mode
+className="rtl:left-0 rtl:right-auto"
+```
+</Accordion>
+
+<Accordion title="sonner">
+**Modifications**: Toast notifications position correctly in RTL
+
+```tsx RTL Toast Positioning
+// Toasts slide from correct direction
+position: dir === 'rtl' ? 'top-left' : 'top-right'
+```
+</Accordion>
+
+<Accordion title="separator">
+**Modifications**: Spacing and orientation handling for RTL
+
+```tsx RTL Separator
+// Margin adjustments for RTL
+className="rtl:mr-0 rtl:ml-2"
+```
+</Accordion>
+
+### RTL Updated Components
+
+These components have specific RTL enhancements:
+
+<Steps>
+  <Step title="alert-dialog">
+    Dialog positioning and animations adjusted for RTL
+  </Step>
+  
+  <Step title="calendar">
+    Calendar navigation and layout mirrored
+  </Step>
+  
+  <Step title="command">
+    Command palette positioning and shortcuts
+  </Step>
+  
+  <Step title="dialog">
+    Modal positioning and close button placement
+  </Step>
+  
+  <Step title="dropdown-menu">
+    Menu positioning and submenu directions
+  </Step>
+  
+  <Step title="select">
+    Dropdown positioning and arrow placement
+  </Step>
+  
+  <Step title="table">
+    Table layout and column alignment
+  </Step>
+  
+  <Step title="sheet">
+    Slide-over panel directions
+  </Step>
+  
+  <Step title="sidebar">
+    Sidebar positioning and collapse behavior
+  </Step>
+  
+  <Step title="switch">
+    Toggle animation direction
+  </Step>
+</Steps>
+
+## Sidebar RTL Example
+
+The sidebar component includes comprehensive RTL support:
+
+```tsx src/components/ui/sidebar.tsx (excerpt)
+function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
+  const { toggleSidebar } = useSidebar()
+
+  return (
+    <button
+      data-sidebar='rail'
+      onClick={toggleSidebar}
+      className={cn(
+        'absolute inset-y-0 z-20 hidden w-4 transition-all',
+        'group-data-[side=left]:-end-4 group-data-[side=right]:start-0',
+        
+        // Cursor direction changes for RTL
+        'in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize',
+        
+        // RTL cursor support
+        'rtl:translate-x-1/2',
+        'rtl:in-data-[side=left]:cursor-e-resize rtl:in-data-[side=right]:cursor-w-resize',
+        'rtl:[[data-side=left][data-state=collapsed]_&]:cursor-w-resize',
+        'rtl:[[data-side=right][data-state=collapsed]_&]:cursor-e-resize',
+        
+        className
+      )}
+      {...props}
+    />
+  )
+}
+```
+
+<Accordion title="RTL Sidebar Features">
+- **Automatic Positioning**: Sidebar appears on the right in RTL mode
+- **Cursor Adjustments**: Resize cursor direction changes appropriately
+- **Animation Direction**: Collapse/expand animations mirror correctly
+- **Touch Gestures**: Swipe directions adapt to text direction
+</Accordion>
+
+## CSS RTL Utilities
+
+Tailwind CSS provides RTL-specific utilities:
+
+```tsx RTL Utility Classes
+function MyComponent() {
+  return (
+    <div className="ml-4 rtl:ml-0 rtl:mr-4">
+      {/* Margin switches sides in RTL */}
+    </div>
+  )
+}
+```
+
+### Common RTL Patterns
+
+<CodeGroup>
+```tsx Margin/Padding
+ml-4 rtl:ml-0 rtl:mr-4    // Left margin → Right margin in RTL
+pr-4 rtl:pr-0 rtl:pl-4    // Right padding → Left padding in RTL
+```
+
+```tsx Positioning
+left-0 rtl:left-auto rtl:right-0    // Swap left/right
+right-4 rtl:right-auto rtl:left-4   // Swap right/left
+```
+
+```tsx Flex/Grid
+justify-start rtl:justify-end       // Start from right in RTL
+text-left rtl:text-right            // Text alignment
+```
+
+```tsx Transforms
+translate-x-4 rtl:-translate-x-4    // Invert X translations
+rotate-90 rtl:-rotate-90            // Mirror rotations
+```
+</CodeGroup>
+
+## Automatic Layout Mirroring
+
+When `dir="rtl"` is set on the `<html>` element, many layouts automatically mirror:
+
+### Flex Layouts
+
+```tsx Automatic Flex Mirroring
+<div className="flex">
+  <div>First</div>   {/* Appears on right in RTL */}
+  <div>Second</div>  {/* Appears on left in RTL */}
+</div>
+```
+
+### Grid Layouts
+
+```tsx Grid Column Order
+<div className="grid grid-cols-3">
+  <div>1</div>  {/* Column 3 in RTL */}
+  <div>2</div>  {/* Column 2 in RTL */}
+  <div>3</div>  {/* Column 1 in RTL */}
+</div>
+```
+
+<Tip>
+Flexbox and Grid automatically reverse in RTL mode without additional CSS.
+</Tip>
+
+## Icons and Directional Content
+
+Some icons need special handling in RTL:
+
+```tsx Directional Icons
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+function NavigationButton({ direction }: { direction: 'prev' | 'next' }) {
+  const { dir } = useDirection()
+  
+  // Swap icons in RTL
+  const Icon = direction === 'prev' 
+    ? (dir === 'rtl' ? ChevronRight : ChevronLeft)
+    : (dir === 'rtl' ? ChevronLeft : ChevronRight)
+  
+  return <Icon />
+}
+```
+
+### Icons That Should Mirror
+
+<Steps>
+  <Step title="Directional Arrows">
+    Arrows pointing left/right should flip
+  </Step>
+  
+  <Step title="Navigation Icons">
+    Back/forward, next/previous icons
+  </Step>
+  
+  <Step title="Chevrons">
+    Menu expansion indicators
+  </Step>
+  
+  <Step title="Text Alignment Icons">
+    Left/right/justify alignment icons
+  </Step>
+</Steps>
+
+### Icons That Should NOT Mirror
+
+<Warning>
+Do not mirror icons that represent:
+- Media controls (play, pause, skip)
+- Universal symbols (search, settings)
+- Checkmarks or crosses
+- Logos and brand marks
+</Warning>
+
+## Testing RTL Layout
+
+### Enable RTL Mode
+
+<Steps>
+  <Step title="Add Direction Toggle">
+    Create a UI control to switch directions:
+    ```tsx
+    import { useDirection } from '@/context/direction-provider'
+    
+    function DirectionToggle() {
+      const { dir, setDir } = useDirection()
+      return (
+        <button onClick={() => setDir(dir === 'ltr' ? 'rtl' : 'ltr')}>
+          {dir === 'rtl' ? 'Switch to LTR' : 'Switch to RTL'}
+        </button>
+      )
+    }
+    ```
+  </Step>
+  
+  <Step title="Test All Pages">
+    Navigate through your application and verify:
+    - Layouts mirror correctly
+    - Text aligns to the right
+    - Navigation feels natural
+    - No content is cut off or overlapping
+  </Step>
+  
+  <Step title="Check Components">
+    Test interactive components:
+    - Dropdowns open in correct direction
+    - Dialogs position correctly
+    - Forms flow naturally
+    - Tables align properly
+  </Step>
+</Steps>
+
+### Browser DevTools
+
+You can test RTL in Chrome DevTools:
+
+1. Open DevTools (F12)
+2. Open the Command Palette (Cmd/Ctrl + Shift + P)
+3. Type "Rendering" and select "Show Rendering"
+4. Enable "Emulate CSS media feature prefers-reduced-data: reduce"
+5. Manually set `document.dir = 'rtl'` in console
+
+## Updating Components for RTL
+
+If you need to update an existing Shadcn component via CLI:
+
+<Warning>
+Customized RTL components may be overwritten if you run:
+```bash
+npx shadcn@latest add <component>
+```
+
+You'll need to manually re-apply RTL modifications.
+</Warning>
+
+### Safe Updates
+
+These components can be safely updated (no RTL customization):
+
+```bash
+button, card, badge, avatar, input, label, 
+checkbox, radio-group, skeleton, form, etc.
+```
+
+### Components Requiring Manual Merge
+
+These need careful updating to preserve RTL support:
+
+```bash
+alert-dialog, calendar, command, dialog, 
+dropdown-menu, select, table, sheet, 
+sidebar, switch, scroll-area, sonner, separator
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Logical Properties">
+    Prefer logical CSS properties when possible:
+    ```css
+    margin-inline-start: 1rem;  /* Instead of margin-left */
+    padding-inline-end: 1rem;   /* Instead of padding-right */
+    ```
+  </Step>
+  
+  <Step title="Test Early and Often">
+    Enable RTL mode during development to catch issues early.
+  </Step>
+  
+  <Step title="Avoid Fixed Directions">
+    Don't hardcode "left" or "right" - use start/end:
+    ```tsx
+    ✓ className="start-0"     // Adapts to direction
+    ✗ className="left-0"      // Always left
+    ```
+  </Step>
+  
+  <Step title="Document Custom RTL Logic">
+    Comment any special RTL handling in your code:
+    ```tsx
+    // Swap chevron direction for RTL navigation
+    const Icon = dir === 'rtl' ? ChevronLeft : ChevronRight
+    ```
+  </Step>
+</Steps>
+
+## Common RTL Issues
+
+<Accordion title="Text alignment issues">
+**Problem**: Text doesn't align to the right in RTL mode
+
+**Solution**: Ensure the `dir` attribute is set on the `<html>` element:
+```tsx
+document.documentElement.setAttribute('dir', 'rtl')
+```
+</Accordion>
+
+<Accordion title="Icons pointing wrong direction">
+**Problem**: Directional icons don't flip in RTL
+
+**Solution**: Conditionally render icons based on direction:
+```tsx
+const { dir } = useDirection()
+const Icon = dir === 'rtl' ? ChevronLeft : ChevronRight
+```
+</Accordion>
+
+<Accordion title="Dropdowns positioning incorrectly">
+**Problem**: Dropdown menus overflow off-screen
+
+**Solution**: Use RTL-aware Radix UI components (already included in customized components)
+</Accordion>
+
+<Accordion title="Sidebar appears on wrong side">
+**Problem**: Sidebar stays on left in RTL mode
+
+**Solution**: Ensure you're using the customized `sidebar.tsx` component with RTL support
+</Accordion>
+
+## Additional Resources
+
+<CardGroup cols={2}>
+  <Card title="Tailwind RTL Plugin" icon="wind" href="https://tailwindcss.com/docs/hover-focus-and-other-states#rtl-support">
+    Official Tailwind CSS RTL documentation
+  </Card>
+  
+  <Card title="Radix UI Direction" icon="code" href="https://www.radix-ui.com/primitives/docs/utilities/direction-provider">
+    Radix UI DirectionProvider documentation
+  </Card>
+  
+  <Card title="RTL Styling 101" icon="book" href="https://rtlstyling.com/">
+    Comprehensive guide to RTL CSS
+  </Card>
+  
+  <Card title="Project Structure" icon="folder-tree" href="/concepts/project-structure">
+    Learn about the overall project organization
+  </Card>
+</CardGroup>
+
+## Example: Complete RTL Component
+
+Here's a complete example of an RTL-aware navigation component:
+
+```tsx RTL Navigation Component
+import { useDirection } from '@/context/direction-provider'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+function Pagination({ page, totalPages, onPageChange }) {
+  const { dir } = useDirection()
+  
+  // Icons swap in RTL
+  const PrevIcon = dir === 'rtl' ? ChevronRight : ChevronLeft
+  const NextIcon = dir === 'rtl' ? ChevronLeft : ChevronRight
+  
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={() => onPageChange(page - 1)}
+        disabled={page === 1}
+      >
+        <PrevIcon className="size-4" />
+        <span className="ms-2">Previous</span>
+      </Button>
+      
+      <span className="text-sm text-muted-foreground">
+        {page} / {totalPages}
+      </span>
+      
+      <Button
+        onClick={() => onPageChange(page + 1)}
+        disabled={page === totalPages}
+      >
+        <span className="me-2">Next</span>
+        <NextIcon className="size-4" />
+      </Button>
+    </div>
+  )
+}
+```
+
+Note the RTL considerations:
+- Icons swap based on direction
+- Uses logical spacing (`ms-2`, `me-2`) instead of `ml-2`, `mr-2`
+- Layout automatically mirrors with flexbox

@@ -1,0 +1,321 @@
+---
+title: Project Structure
+description: Understanding the directory layout and organization of Shadcn Admin
+icon: folder-tree
+---
+
+Shadcn Admin follows a feature-based architecture that promotes scalability and maintainability. This guide explains the project's directory structure and key organizational patterns.
+
+## Directory Overview
+
+The project uses a well-organized structure that separates concerns and groups related functionality:
+
+```
+src/
+├── assets/           # Static assets and custom icons
+├── components/       # Reusable UI components
+├── context/          # React context providers
+├── features/         # Feature-based modules
+├── hooks/            # Custom React hooks
+├── lib/              # Utility functions
+├── routes/           # TanStack Router route definitions
+├── stores/           # State management stores
+└── styles/           # Global styles and theme
+```
+
+## Core Directories
+
+<CardGroup cols={2}>
+  <Card title="components/" icon="blocks">
+    Shared UI components organized by purpose:
+    - `ui/` - Shadcn UI components (30+ components)
+    - `layout/` - Layout components like sidebar and header
+    - `data-table/` - Data table components and utilities
+  </Card>
+  
+  <Card title="features/" icon="puzzle-piece">
+    Feature-based modules with co-located code:
+    - Each feature contains its own components, data, and logic
+    - Examples: `dashboard/`, `auth/`, `users/`, `tasks/`
+  </Card>
+  
+  <Card title="routes/" icon="route">
+    File-based routing with TanStack Router:
+    - `__root.tsx` - Root layout component
+    - `_authenticated/` - Protected routes requiring authentication
+    - `(auth)/` - Authentication pages (sign-in, sign-up)
+    - `(errors)/` - Error pages (401, 403, 404, 500, 503)
+  </Card>
+  
+  <Card title="context/" icon="code">
+    Application-wide context providers:
+    - Theme management (light/dark mode)
+    - Direction support (LTR/RTL)
+    - Layout configuration
+    - Font preferences
+  </Card>
+</CardGroup>
+
+## Feature-Based Organization
+
+The `features/` directory uses a modular approach where each feature is self-contained:
+
+<CodeGroup>
+```bash Example: Dashboard Feature
+src/features/dashboard/
+├── components/          # Dashboard-specific components
+│   ├── stats-cards.tsx
+│   ├── recent-sales.tsx
+│   └── overview-chart.tsx
+├── data/               # Mock data and constants
+└── index.tsx           # Main dashboard component
+```
+
+```bash Example: Users Feature
+src/features/users/
+├── components/
+│   ├── user-form.tsx
+│   └── user-details.tsx
+├── data/
+│   ├── schema.ts       # Zod validation schemas
+│   └── data.tsx        # Mock user data
+└── index.tsx
+```
+
+```bash Example: Authentication Feature
+src/features/auth/
+├── sign-in/
+│   ├── components/
+│   ├── assets/
+│   └── index.tsx
+├── sign-up/
+│   ├── components/
+│   └── index.tsx
+├── forgot-password/
+│   └── components/
+└── otp/
+    └── components/
+```
+</CodeGroup>
+
+<Note>
+This feature-based structure makes it easy to locate related code and maintain clear boundaries between different parts of the application.
+</Note>
+
+## Key Files
+
+### Application Entry Point
+
+<Accordion title="src/main.tsx">
+The main entry point sets up the application with all necessary providers:
+
+```tsx src/main.tsx
+import { StrictMode } from 'react'
+import ReactDOM from 'react-dom/client'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { DirectionProvider } from './context/direction-provider'
+import { FontProvider } from './context/font-provider'
+import { ThemeProvider } from './context/theme-provider'
+import { routeTree } from './routeTree.gen'
+import './styles/index.css'
+
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  defaultPreload: 'intent',
+  defaultPreloadStaleTime: 0,
+})
+
+root.render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <FontProvider>
+          <DirectionProvider>
+            <RouterProvider router={router} />
+          </DirectionProvider>
+        </FontProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </StrictMode>
+)
+```
+</Accordion>
+
+### Component Library
+
+The `components/ui/` directory contains 30+ Shadcn UI components, some customized for RTL support:
+
+```bash Key UI Components
+components/ui/
+├── button.tsx          # Button component with variants
+├── card.tsx            # Card layouts
+├── dialog.tsx          # Modal dialogs (RTL-enhanced)
+├── dropdown-menu.tsx   # Dropdown menus (RTL-enhanced)
+├── sidebar.tsx         # Sidebar navigation (RTL-enhanced)
+├── table.tsx           # Data tables (RTL-enhanced)
+└── ...                 # 25+ more components
+```
+
+### Layout Components
+
+<Accordion title="components/layout/">
+Layout components provide the application shell:
+
+```bash
+components/layout/
+├── authenticated-layout.tsx  # Main authenticated layout wrapper
+├── app-sidebar.tsx          # Application sidebar navigation
+├── header.tsx               # Page header with breadcrumbs
+├── main.tsx                 # Main content container
+├── nav-group.tsx            # Navigation group component
+├── nav-user.tsx             # User profile in sidebar
+└── data/
+    └── sidebar-data.ts      # Sidebar navigation configuration
+```
+
+**Example: Authenticated Layout**
+
+```tsx components/layout/authenticated-layout.tsx
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { AppSidebar } from '@/components/layout/app-sidebar'
+
+export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
+  const defaultOpen = getCookie('sidebar_state') !== 'false'
+  return (
+    <SearchProvider>
+      <LayoutProvider>
+        <SidebarProvider defaultOpen={defaultOpen}>
+          <AppSidebar />
+          <SidebarInset>
+            {children ?? <Outlet />}
+          </SidebarInset>
+        </SidebarProvider>
+      </LayoutProvider>
+    </SearchProvider>
+  )
+}
+```
+</Accordion>
+
+## Utilities and Helpers
+
+<CardGroup cols={2}>
+  <Card title="lib/" icon="wrench">
+    **Utility Functions**
+    - `utils.ts` - Common utilities including `cn()` for class merging
+    - `cookies.ts` - Cookie management helpers
+    - `handle-server-error.ts` - Error handling utilities
+  </Card>
+  
+  <Card title="hooks/" icon="hook">
+    **Custom React Hooks**
+    - `use-mobile.tsx` - Responsive breakpoint detection
+    - `use-dialog-state.tsx` - Dialog state management
+    - `use-table-url-state.ts` - URL-based table state
+  </Card>
+</CardGroup>
+
+## Asset Organization
+
+Assets are organized by type and purpose:
+
+```bash
+src/assets/
+├── brand-icons/        # Social media and brand icons
+│   ├── icon-github.tsx
+│   ├── icon-slack.tsx
+│   └── ...            # 15+ brand icons
+├── custom/            # Custom icon components
+│   ├── icon-theme-dark.tsx
+│   ├── icon-theme-light.tsx
+│   ├── icon-sidebar-floating.tsx
+│   └── ...
+└── logo.tsx           # Application logo
+```
+
+## Configuration Files
+
+<Steps>
+  <Step title="components.json">
+    Shadcn UI configuration file defining component installation settings and paths.
+  </Step>
+  
+  <Step title="tsconfig.json">
+    TypeScript configuration with path aliases:
+    - `@/` maps to `src/` for cleaner imports
+  </Step>
+  
+  <Step title="vite.config.ts">
+    Vite bundler configuration for development and production builds.
+  </Step>
+</Steps>
+
+## Best Practices
+
+<Tip>
+**Co-location Principle**: Keep related files close together. If a component, its styles, and its tests are only used by one feature, place them in that feature's directory.
+</Tip>
+
+<Warning>
+**Avoid Deep Nesting**: Keep directory structures relatively flat (2-3 levels max) to maintain discoverability.
+</Warning>
+
+### Import Path Aliases
+
+The project uses the `@/` alias for clean imports:
+
+```tsx Good: Using Path Alias
+import { Button } from '@/components/ui/button'
+import { useTheme } from '@/context/theme-provider'
+import { Dashboard } from '@/features/dashboard'
+```
+
+```tsx Avoid: Relative Imports
+import { Button } from '../../../components/ui/button'
+import { useTheme } from '../../context/theme-provider'
+```
+
+## Adding New Features
+
+When creating a new feature:
+
+<Steps>
+  <Step title="Create Feature Directory">
+    Add a new folder under `src/features/` with your feature name:
+    ```bash
+    src/features/my-feature/
+    ```
+  </Step>
+  
+  <Step title="Add Feature Structure">
+    Create the standard subdirectories:
+    ```bash
+    src/features/my-feature/
+    ├── components/    # Feature-specific components
+    ├── data/          # Types, schemas, mock data
+    └── index.tsx      # Main feature export
+    ```
+  </Step>
+  
+  <Step title="Create Route">
+    Add a route file in `src/routes/_authenticated/my-feature/index.tsx`
+  </Step>
+  
+  <Step title="Update Navigation">
+    Add your feature to the sidebar navigation in `src/components/layout/data/sidebar-data.ts`
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Routing" icon="route" href="/concepts/routing">
+    Learn about TanStack Router and file-based routing
+  </Card>
+  
+  <Card title="Theming" icon="palette" href="/concepts/theming">
+    Customize colors, fonts, and theme system
+  </Card>
+</CardGroup>

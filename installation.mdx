@@ -1,0 +1,233 @@
+---
+title: Installation
+description: Get Shadcn Admin up and running on your local machine
+---
+
+This guide will walk you through setting up Shadcn Admin on your local development environment.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Version 18.0 or higher recommended
+  </Card>
+  <Card title="Package Manager" icon="package">
+    npm, pnpm, or yarn
+  </Card>
+</CardGroup>
+
+<Note>
+  This project uses **pnpm** as the default package manager, but you can use npm or yarn if you prefer.
+</Note>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Shadcn Admin repository to your local machine:
+
+    ```bash
+    git clone https://github.com/satnaing/shadcn-admin.git
+    ```
+
+    Navigate to the project directory:
+
+    ```bash
+    cd shadcn-admin
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install the project dependencies using your preferred package manager:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm install
+      ```
+
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+    </CodeGroup>
+
+    This will install all required dependencies including:
+    - **React 19** - UI library
+    - **Vite** - Build tool and dev server
+    - **TanStack Router** - Type-safe routing
+    - **TanStack Query** - Data fetching and state management
+    - **Tailwind CSS 4** - Utility-first CSS framework
+    - **Shadcn UI** - Component library built on Radix UI
+    - **TypeScript** - Type safety
+  </Step>
+
+  <Step title="Configure Environment Variables (Optional)">
+    If you plan to use Clerk authentication, create a `.env` file in the root directory:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Then add your Clerk publishable key:
+
+    ```bash .env
+    VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
+    ```
+
+    <Tip>
+      The dashboard works without Clerk by default. Authentication integration is optional and can be configured later.
+    </Tip>
+  </Step>
+
+  <Step title="Start the Development Server">
+    Run the development server:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm run dev
+      ```
+
+      ```bash npm
+      npm run dev
+      ```
+
+      ```bash yarn
+      yarn dev
+      ```
+    </CodeGroup>
+
+    The application will be available at `http://localhost:5173` (or the next available port).
+  </Step>
+
+  <Step title="Verify Installation">
+    Open your browser and navigate to `http://localhost:5173`. You should see the Shadcn Admin dashboard with:
+
+    - A responsive sidebar navigation
+    - Dashboard overview with charts and statistics
+    - Light/dark mode toggle
+    - Global search command menu (press `Cmd+K` or `Ctrl+K`)
+  </Step>
+</Steps>
+
+## Available Scripts
+
+The project includes several npm scripts defined in `package.json`:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| **dev** | `pnpm run dev` | Start the development server with hot reload |
+| **build** | `pnpm run build` | Build the production-ready application |
+| **preview** | `pnpm run preview` | Preview the production build locally |
+| **lint** | `pnpm run lint` | Run ESLint to check code quality |
+| **format** | `pnpm run format` | Format code with Prettier |
+| **format:check** | `pnpm run format:check` | Check code formatting without modifying files |
+
+## Project Structure
+
+After installation, your project directory will look like this:
+
+```
+shadcn-admin/
+├── public/              # Static assets
+├── src/
+│   ├── assets/          # Images, icons, and custom assets
+│   ├── components/      # Reusable UI components
+│   │   ├── layout/      # Layout components (AppSidebar, etc.)
+│   │   └── ui/          # Shadcn UI components
+│   ├── context/         # React context providers (theme, layout, etc.)
+│   ├── features/        # Feature-based modules
+│   ├── hooks/           # Custom React hooks
+│   ├── lib/             # Utility functions and helpers
+│   ├── routes/          # TanStack Router route definitions
+│   ├── stores/          # Zustand state stores
+│   ├── styles/          # Global styles and CSS
+│   └── main.tsx         # Application entry point
+├── .env.example         # Environment variable template
+├── package.json         # Project dependencies and scripts
+├── tsconfig.json        # TypeScript configuration
+├── vite.config.ts       # Vite configuration
+└── tailwind.config.js   # Tailwind CSS configuration
+```
+
+## Tech Stack Overview
+
+<CardGroup cols={2}>
+  <Card title="React 19" icon="react">
+    Latest version of React with improved performance and features
+  </Card>
+  <Card title="TypeScript" icon="code">
+    Type-safe development with full IDE support
+  </Card>
+  <Card title="Vite" icon="bolt">
+    Lightning-fast build tool with HMR
+  </Card>
+  <Card title="TanStack Router" icon="route">
+    Type-safe, file-based routing
+  </Card>
+  <Card title="Tailwind CSS 4" icon="paint-brush">
+    Utility-first CSS framework
+  </Card>
+  <Card title="Shadcn UI" icon="blocks">
+    Accessible components built on Radix UI
+  </Card>
+  <Card title="Lucide Icons" icon="icons">
+    Beautiful, consistent icon library
+  </Card>
+  <Card title="TanStack Query" icon="database">
+    Powerful data fetching and caching
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port 5173 is already in use">
+    Vite will automatically use the next available port. Check the terminal output for the actual port number.
+  </Accordion>
+
+  <Accordion title="Module not found errors">
+    Make sure you've installed all dependencies:
+    ```bash
+    pnpm install
+    ```
+    
+    If issues persist, try deleting `node_modules` and `pnpm-lock.yaml`, then reinstall:
+    ```bash
+    rm -rf node_modules pnpm-lock.yaml
+    pnpm install
+    ```
+  </Accordion>
+
+  <Accordion title="TypeScript errors">
+    Ensure you're using TypeScript version ~5.9.3 as specified in package.json. Your IDE should automatically use the workspace TypeScript version.
+  </Accordion>
+
+  <Accordion title="Clerk authentication not working">
+    Make sure you've:
+    1. Created a `.env` file from `.env.example`
+    2. Added your `VITE_CLERK_PUBLISHABLE_KEY`
+    3. Restarted the development server
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Learn how to customize and build with Shadcn Admin
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/concepts/project-structure">
+    Understand the codebase organization
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/components/overview">
+    Explore available UI components
+  </Card>
+  <Card title="Configuration" icon="gear" href="/customization/layout-options">
+    Configure themes, layouts, and more
+  </Card>
+</CardGroup>

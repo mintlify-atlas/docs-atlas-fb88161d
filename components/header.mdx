@@ -1,0 +1,196 @@
+---
+title: Header
+description: Sticky header component with scroll-based blur effect and sidebar trigger.
+---
+
+The `Header` component provides a sticky header bar with automatic blur effects when scrolling. It includes the sidebar toggle button and can contain custom header content.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Scroll Detection" icon="arrows-up-down">
+    Automatically applies blur effect after 10px scroll
+  </Card>
+  <Card title="Sidebar Integration" icon="bars">
+    Includes SidebarTrigger for toggling navigation
+  </Card>
+  <Card title="Fixed Positioning" icon="thumbtack">
+    Optional sticky positioning at viewport top
+  </Card>
+  <Card title="Custom Content" icon="puzzle-piece">
+    Accepts any children for flexible layouts
+  </Card>
+</CardGroup>
+
+## Usage
+
+```tsx
+import { Header } from '@/components/layout/header'
+import { Breadcrumbs } from '@/components/breadcrumbs'
+
+export function Layout() {
+  return (
+    <>
+      <Header fixed>
+        <Breadcrumbs />
+        <div className="ml-auto">
+          <UserMenu />
+        </div>
+      </Header>
+      <Main>
+        {/* Page content */}
+      </Main>
+    </>
+  )
+}
+```
+
+## Props
+
+<ParamField path="fixed" type="boolean" default="false">
+  When `true`, header becomes sticky at the top of the viewport with scroll-based styling.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes to apply to the header element.
+</ParamField>
+
+<ParamField path="children" type="React.ReactNode">
+  Header content (e.g., breadcrumbs, search, actions).
+</ParamField>
+
+## Implementation Details
+
+```tsx src/components/layout/header.tsx
+type HeaderProps = React.HTMLAttributes<HTMLElement> & {
+  fixed?: boolean
+  ref?: React.Ref<HTMLElement>
+}
+
+export function Header({ className, fixed, children, ...props }: HeaderProps) {
+  const [offset, setOffset] = useState(0)
+
+  useEffect(() => {
+    const onScroll = () => {
+      setOffset(document.body.scrollTop || document.documentElement.scrollTop)
+    }
+    document.addEventListener('scroll', onScroll, { passive: true })
+    return () => document.removeEventListener('scroll', onScroll)
+  }, [])
+
+  return (
+    <header
+      className={cn(
+        'z-50 h-16',
+        fixed && 'header-fixed peer/header sticky top-0 w-[inherit]',
+        offset > 10 && fixed ? 'shadow' : 'shadow-none',
+        className
+      )}
+      {...props}
+    >
+      <div
+        className={cn(
+          'relative flex h-full items-center gap-3 p-4 sm:gap-4',
+          offset > 10 &&
+            fixed &&
+            'after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg'
+        )}
+      >
+        <SidebarTrigger variant='outline' className='max-md:scale-125' />
+        <Separator orientation='vertical' className='h-6' />
+        {children}
+      </div>
+    </header>
+  )
+}
+```
+
+## Styling Features
+
+### Height
+
+The header has a fixed height of `4rem` (64px) for consistency across layouts.
+
+### Blur Effect
+
+When `fixed={true}` and scroll offset exceeds 10px:
+
+```css
+after:bg-background/20 after:backdrop-blur-lg
+```
+
+This creates a frosted glass effect for better content separation.
+
+### Shadow
+
+A subtle shadow appears when scrolled:
+
+```tsx
+offset > 10 && fixed ? 'shadow' : 'shadow-none'
+```
+
+## Layout Structure
+
+The header includes three key elements:
+
+1. **SidebarTrigger** - Button to toggle sidebar (scaled larger on mobile)
+2. **Separator** - Vertical line between trigger and content
+3. **Children** - Custom header content
+
+## Examples
+
+### Basic Header
+
+```tsx
+import { Header } from '@/components/layout/header'
+
+<Header fixed>
+  <h1 className="text-lg font-semibold">Dashboard</h1>
+</Header>
+```
+
+### Header with Actions
+
+```tsx
+import { Header } from '@/components/layout/header'
+import { Search } from '@/components/search'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+
+<Header fixed>
+  <Search />
+  <div className="ml-auto flex items-center gap-2">
+    <ThemeSwitch />
+    <ProfileDropdown />
+  </div>
+</Header>
+```
+
+### Non-Fixed Header
+
+```tsx
+<Header>
+  <Breadcrumbs />
+</Header>
+```
+
+## Accessibility
+
+The header uses a semantic `<header>` element and maintains proper heading hierarchy when used with heading content.
+
+## Mobile Considerations
+
+- SidebarTrigger scales 1.25x on mobile (`max-md:scale-125`) for easier touch targets
+- Gap between elements reduces from `sm:gap-4` to `gap-3` on smaller screens
+
+## CSS Variables
+
+The header respects these CSS variables:
+
+- `--spacing` - Used for internal padding calculations
+- Theme colors for background and shadow effects
+
+## Related Components
+
+- [App Sidebar](/components/app-sidebar) - Navigation triggered by header
+- [Main Layout](/components/main-layout) - Content area below header

@@ -1,0 +1,434 @@
+---
+title: Global Search
+description: Command menu for quick navigation and actions
+icon: magnifying-glass
+---
+
+The global search feature provides a powerful command menu accessible via `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux). It allows users to quickly navigate to any page and change theme settings.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Keyboard Shortcut" icon="keyboard">
+    Quick access with Cmd+K or Ctrl+K
+  </Card>
+  <Card title="Smart Navigation" icon="compass">
+    Search and navigate to any page
+  </Card>
+  <Card title="Theme Switching" icon="palette">
+    Change theme directly from command menu
+  </Card>
+  <Card title="Fuzzy Search" icon="filter">
+    Find pages even with partial matches
+  </Card>
+</CardGroup>
+
+## Implementation
+
+The command menu is implemented using shadcn/ui's Command component:
+
+```tsx src/components/command-menu.tsx
+import React from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { ArrowRight, ChevronRight, Laptop, Moon, Sun } from 'lucide-react'
+import { useSearch } from '@/context/search-provider'
+import { useTheme } from '@/context/theme-provider'
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command'
+import { sidebarData } from './layout/data/sidebar-data'
+import { ScrollArea } from './ui/scroll-area'
+
+export function CommandMenu() {
+  const navigate = useNavigate()
+  const { setTheme } = useTheme()
+  const { open, setOpen } = useSearch()
+
+  const runCommand = React.useCallback(
+    (command: () => unknown) => {
+      setOpen(false)
+      command()
+    },
+    [setOpen]
+  )
+
+  return (
+    <CommandDialog modal open={open} onOpenChange={setOpen}>
+      <CommandInput placeholder="Type a command or search..." />
+      <CommandList>
+        <ScrollArea type="hover" className="h-72 pe-1">
+          <CommandEmpty>No results found.</CommandEmpty>
+          
+          {sidebarData.navGroups.map((group) => (
+            <CommandGroup key={group.title} heading={group.title}>
+              {group.items.map((navItem, i) => {
+                if (navItem.url)
+                  return (
+                    <CommandItem
+                      key={`${navItem.url}-${i}`}
+                      value={navItem.title}
+                      onSelect={() => {
+                        runCommand(() => navigate({ to: navItem.url }))
+                      }}
+                    >
+                      <div className="flex size-4 items-center justify-center">
+                        <ArrowRight className="size-2 text-muted-foreground/80" />
+                      </div>
+                      {navItem.title}
+                    </CommandItem>
+                  )
+
+                return navItem.items?.map((subItem, i) => (
+                  <CommandItem
+                    key={`${navItem.title}-${subItem.url}-${i}`}
+                    value={`${navItem.title}-${subItem.url}`}
+                    onSelect={() => {
+                      runCommand(() => navigate({ to: subItem.url }))
+                    }}
+                  >
+                    <div className="flex size-4 items-center justify-center">
+                      <ArrowRight className="size-2 text-muted-foreground/80" />
+                    </div>
+                    {navItem.title} <ChevronRight /> {subItem.title}
+                  </CommandItem>
+                ))
+              })}
+            </CommandGroup>
+          ))}
+          
+          <CommandSeparator />
+          
+          <CommandGroup heading="Theme">
+            <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>
+              <Sun /> <span>Light</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => setTheme('dark'))}>
+              <Moon className="scale-90" />
+              <span>Dark</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => setTheme('system'))}>
+              <Laptop />
+              <span>System</span>
+            </CommandItem>
+          </CommandGroup>
+        </ScrollArea>
+      </CommandList>
+    </CommandDialog>
+  )
+}
+```
+
+## Search Provider
+
+The search functionality is managed by the `SearchProvider`:
+
+```tsx src/context/search-provider.tsx
+import { createContext, useContext, useEffect, useState } from 'react'
+import { CommandMenu } from '@/components/command-menu'
+
+type SearchContextType = {
+  open: boolean
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+const SearchContext = createContext<SearchContextType | null>(null)
+
+export function SearchProvider({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setOpen((open) => !open)
+      }
+    }
+    document.addEventListener('keydown', down)
+    return () => document.removeEventListener('keydown', down)
+  }, [])
+
+  return (
+    <SearchContext value={{ open, setOpen }}>
+      {children}
+      <CommandMenu />
+    </SearchContext>
+  )
+}
+
+export const useSearch = () => {
+  const searchContext = useContext(SearchContext)
+  if (!searchContext) {
+    throw new Error('useSearch has to be used within SearchProvider')
+  }
+  return searchContext
+}
+```
+
+## Usage
+
+### Keyboard Shortcut
+
+Open the command menu with:
+
+- **Mac**: `Cmd + K`
+- **Windows/Linux**: `Ctrl + K`
+
+### Programmatic Control
+
+Open/close the menu programmatically:
+
+```tsx
+import { useSearch } from '@/context/search-provider'
+
+function MyComponent() {
+  const { open, setOpen } = useSearch()
+  
+  return (
+    <button onClick={() => setOpen(true)}>
+      Open Search
+    </button>
+  )
+}
+```
+
+## Navigation Groups
+
+The command menu automatically organizes items by navigation groups from `sidebarData`:
+
+```tsx
+// Navigation items are grouped by title
+<CommandGroup heading="General">
+  <CommandItem>Dashboard</CommandItem>
+  <CommandItem>Tasks</CommandItem>
+  <CommandItem>Users</CommandItem>
+</CommandGroup>
+
+<CommandGroup heading="Pages">
+  <CommandItem>Auth / Sign In</CommandItem>
+  <CommandItem>Auth / Sign Up</CommandItem>
+</CommandGroup>
+```
+
+## Nested Navigation
+
+Nested items are displayed with breadcrumb-style labels:
+
+```tsx
+// Displays as: "Settings > Profile"
+<CommandItem>
+  Settings <ChevronRight /> Profile
+</CommandItem>
+
+// Displays as: "Auth > Sign In"
+<CommandItem>
+  Auth <ChevronRight /> Sign In
+</CommandItem>
+```
+
+## Theme Switching
+
+Quickly change the theme without going to settings:
+
+```tsx
+<CommandGroup heading="Theme">
+  <CommandItem onSelect={() => setTheme('light')}>
+    <Sun /> Light
+  </CommandItem>
+  <CommandItem onSelect={() => setTheme('dark')}>
+    <Moon /> Dark
+  </CommandItem>
+  <CommandItem onSelect={() => setTheme('system')}>
+    <Laptop /> System
+  </CommandItem>
+</CommandGroup>
+```
+
+## Search Functionality
+
+The command menu includes fuzzy search:
+
+```tsx
+<CommandInput placeholder="Type a command or search..." />
+```
+
+Users can search by:
+- Page title (e.g., "dashboard", "tasks")
+- Partial matches (e.g., "dash" finds "Dashboard")
+- Parent and child names (e.g., "settings profile")
+
+## Empty State
+
+Show helpful message when no results match:
+
+```tsx
+<CommandEmpty>
+  No results found.
+</CommandEmpty>
+```
+
+## Scrollable Results
+
+Results are contained in a scrollable area:
+
+```tsx
+<ScrollArea type="hover" className="h-72 pe-1">
+  {/* Command items */}
+</ScrollArea>
+```
+
+## Custom Actions
+
+Add custom actions to the command menu:
+
+```tsx
+<CommandGroup heading="Actions">
+  <CommandItem
+    onSelect={() => runCommand(() => {
+      // Custom action
+      createNewTask()
+    })}
+  >
+    <Plus /> Create New Task
+  </CommandItem>
+  
+  <CommandItem
+    onSelect={() => runCommand(() => {
+      navigator.clipboard.writeText(window.location.href)
+      toast.success('URL copied')
+    })}
+  >
+    <Copy /> Copy Current URL
+  </CommandItem>
+</CommandGroup>
+```
+
+## Integration with Layout
+
+The command menu is included in the `AuthenticatedLayout`:
+
+```tsx
+<SearchProvider>
+  <LayoutProvider>
+    <SidebarProvider>
+      {/* App content */}
+    </SidebarProvider>
+  </LayoutProvider>
+</SearchProvider>
+```
+
+## Styling
+
+Customize the appearance:
+
+```tsx
+<CommandDialog
+  modal
+  open={open}
+  onOpenChange={setOpen}
+  // Custom classes
+  className="max-w-2xl"
+>
+  {/* Content */}
+</CommandDialog>
+```
+
+## Keyboard Navigation
+
+Built-in keyboard support:
+
+- `↓` / `↑` - Navigate items
+- `Enter` - Select item
+- `Escape` - Close menu
+- `Cmd+K` / `Ctrl+K` - Toggle menu
+
+## Adding Search Button
+
+Add a visual trigger in your UI:
+
+```tsx
+import { Search } from 'lucide-react'
+import { useSearch } from '@/context/search-provider'
+
+function Header() {
+  const { setOpen } = useSearch()
+  
+  return (
+    <Button
+      variant="outline"
+      onClick={() => setOpen(true)}
+      className="w-full justify-start text-muted-foreground"
+    >
+      <Search className="mr-2 h-4 w-4" />
+      <span>Search...</span>
+      <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
+        <span className="text-xs">⌘</span>K
+      </kbd>
+    </Button>
+  )
+}
+```
+
+## Recent Searches
+
+Implement search history:
+
+```tsx
+const [recentSearches, setRecentSearches] = useState<string[]>([])
+
+function addToRecent(search: string) {
+  setRecentSearches(prev => [
+    search,
+    ...prev.filter(s => s !== search).slice(0, 4)
+  ])
+}
+
+<CommandGroup heading="Recent">
+  {recentSearches.map(search => (
+    <CommandItem key={search} value={search}>
+      <History className="mr-2 h-4 w-4" />
+      {search}
+    </CommandItem>
+  ))}
+</CommandGroup>
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Keep It Fast">
+    Ensure the command menu opens instantly (under 100ms)
+  </Step>
+  <Step title="Organize Logically">
+    Group related items together for easy scanning
+  </Step>
+  <Step title="Use Clear Labels">
+    Make search terms obvious and descriptive
+  </Step>
+  <Step title="Show Keyboard Hints">
+    Display the Cmd+K shortcut in your UI
+  </Step>
+  <Step title="Handle Edge Cases">
+    Provide helpful empty states and error messages
+  </Step>
+</Steps>
+
+<Tip>
+  The command menu automatically stays in sync with sidebar navigation changes.
+</Tip>
+
+## Accessibility
+
+- **ARIA Labels**: Proper labeling for screen readers
+- **Keyboard Navigation**: Full keyboard support
+- **Focus Management**: Focus trapped in dialog when open
+- **Escape Key**: Always closeable with Escape
+
+<Note>
+  The command menu is modal by default, preventing interaction with the page until closed.
+</Note>

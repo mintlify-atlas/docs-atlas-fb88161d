@@ -1,0 +1,414 @@
+---
+title: Users Page
+description: User management with sticky columns, advanced filtering, and bulk operations
+icon: 'users'
+---
+
+The Users page provides a comprehensive user management interface with an advanced data table featuring sticky columns, URL-synced filters, and bulk actions.
+
+## Overview
+
+The Users component demonstrates advanced table features including sticky columns for better horizontal scrolling, role-based filtering, and status management.
+
+**Location:** `src/features/users/index.tsx`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Sticky Columns" icon="thumbtack">
+    Fixed checkbox and username columns during horizontal scroll
+  </Card>
+  <Card title="Advanced Filtering" icon="filter">
+    Filter by username, status, and role with URL persistence
+  </Card>
+  <Card title="Bulk Actions" icon="users-gear">
+    Select multiple users for batch operations
+  </Card>
+  <Card title="Role Management" icon="shield">
+    Display and filter users by their assigned roles
+  </Card>
+</CardGroup>
+
+## Component Structure
+
+```tsx src/features/users/index.tsx
+export function Users() {
+  const search = route.useSearch()
+  const navigate = route.useNavigate()
+
+  return (
+    <UsersProvider>
+      <Header fixed>
+        <Search />
+        <div className='ms-auto flex items-center space-x-4'>
+          <ThemeSwitch />
+          <ConfigDrawer />
+          <ProfileDropdown />
+        </div>
+      </Header>
+
+      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+        <div className='flex flex-wrap items-end justify-between gap-2'>
+          <div>
+            <h2 className='text-2xl font-bold tracking-tight'>User List</h2>
+            <p className='text-muted-foreground'>
+              Manage your users and their roles here.
+            </p>
+          </div>
+          <UsersPrimaryButtons />
+        </div>
+        <UsersTable data={users} search={search} navigate={navigate} />
+      </Main>
+
+      <UsersDialogs />
+    </UsersProvider>
+  )
+}
+```
+
+## Table with Sticky Columns
+
+The UsersTable implements sticky columns for better UX on smaller screens:
+
+```tsx src/features/users/components/users-table.tsx
+export function UsersTable({ data, search, navigate }: DataTableProps) {
+  const [rowSelection, setRowSelection] = useState({})
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [sorting, setSorting] = useState<SortingState>([])
+
+  // URL state synchronization
+  const {
+    columnFilters,
+    onColumnFiltersChange,
+    pagination,
+    onPaginationChange,
+    ensurePageInRange,
+  } = useTableUrlState({
+    search,
+    navigate,
+    pagination: { defaultPage: 1, defaultPageSize: 10 },
+    globalFilter: { enabled: false },
+    columnFilters: [
+      { columnId: 'username', searchKey: 'username', type: 'string' },
+      { columnId: 'status', searchKey: 'status', type: 'array' },
+      { columnId: 'role', searchKey: 'role', type: 'array' },
+    ],
+  })
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: { sorting, pagination, rowSelection, columnFilters, columnVisibility },
+    enableRowSelection: true,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  })
+
+  return (
+    <div className='flex flex-1 flex-col gap-4'>
+      <DataTableToolbar
+        table={table}
+        searchPlaceholder='Filter users...'
+        searchKey='username'
+        filters={[
+          {
+            columnId: 'status',
+            title: 'Status',
+            options: [
+              { label: 'Active', value: 'active' },
+              { label: 'Inactive', value: 'inactive' },
+              { label: 'Invited', value: 'invited' },
+              { label: 'Suspended', value: 'suspended' },
+            ],
+          },
+          {
+            columnId: 'role',
+            title: 'Role',
+            options: roles,
+          },
+        ]}
+      />
+      {/* Table with sticky columns */}
+      <DataTablePagination table={table} />
+      <DataTableBulkActions table={table} />
+    </div>
+  )
+}
+```
+
+## Column Definitions with Sticky Positioning
+
+The columns include sticky positioning metadata:
+
+```tsx src/features/users/components/users-columns.tsx
+export const usersColumns: ColumnDef<User>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    meta: {
+      className: cn('max-md:sticky start-0 z-10 rounded-tl-[inherit]'),
+    },
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: 'username',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Username' />
+    ),
+    cell: ({ row }) => (
+      <LongText className='max-w-36 ps-3'>{row.getValue('username')}</LongText>
+    ),
+    meta: {
+      className: cn(
+        'drop-shadow-[0_1px_2px_rgb(0_0_0_/_0.1)]',
+        'ps-0.5 max-md:sticky start-6 @4xl/content:table-cell @4xl/content:drop-shadow-none'
+      ),
+    },
+    enableHiding: false,
+  },
+  {
+    id: 'fullName',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Name' />
+    ),
+    cell: ({ row }) => {
+      const { firstName, lastName } = row.original
+      const fullName = `${firstName} ${lastName}`
+      return <LongText className='max-w-36'>{fullName}</LongText>
+    },
+    meta: { className: 'w-36' },
+  },
+  {
+    accessorKey: 'email',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Email' />
+    ),
+    cell: ({ row }) => (
+      <div className='w-fit ps-2 text-nowrap'>{row.getValue('email')}</div>
+    ),
+  },
+  {
+    accessorKey: 'phoneNumber',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Phone Number' />
+    ),
+    cell: ({ row }) => <div>{row.getValue('phoneNumber')}</div>,
+    enableSorting: false,
+  },
+  {
+    accessorKey: 'status',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Status' />
+    ),
+    cell: ({ row }) => {
+      const { status } = row.original
+      const badgeColor = callTypes.get(status)
+      return (
+        <div className='flex space-x-2'>
+          <Badge variant='outline' className={cn('capitalize', badgeColor)}>
+            {row.getValue('status')}
+          </Badge>
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    enableHiding: false,
+    enableSorting: false,
+  },
+  {
+    accessorKey: 'role',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Role' />
+    ),
+    cell: ({ row }) => {
+      const { role } = row.original
+      const userType = roles.find(({ value }) => value === role)
+
+      return (
+        <div className='flex items-center gap-x-2'>
+          {userType.icon && (
+            <userType.icon size={16} className='text-muted-foreground' />
+          )}
+          <span className='text-sm capitalize'>{row.getValue('role')}</span>
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    id: 'actions',
+    cell: DataTableRowActions,
+  },
+]
+```
+
+## Sticky Column Implementation
+
+The sticky positioning is achieved through metadata and CSS classes:
+
+<Steps>
+  <Step title="Define column metadata">
+    Add `className` to the column's `meta` property with sticky positioning classes:
+    ```tsx
+    meta: {
+      className: cn('max-md:sticky start-0 z-10'),
+    }
+    ```
+  </Step>
+  
+  <Step title="Apply classes to table cells">
+    The table renderer applies these classes to both header and body cells:
+    ```tsx
+    <TableHead
+      className={cn(
+        'bg-background group-hover/row:bg-muted',
+        header.column.columnDef.meta?.className,
+        header.column.columnDef.meta?.thClassName
+      )}
+    >
+    ```
+  </Step>
+  
+  <Step title="Add background colors">
+    Ensure sticky cells have background colors that update on hover:
+    ```tsx
+    className={cn(
+      'bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted',
+      cell.column.columnDef.meta?.className
+    )}
+    ```
+  </Step>
+</Steps>
+
+## Filtering Options
+
+The users table supports three types of filters:
+
+### Username Filter (String)
+
+Text-based search for usernames:
+
+```tsx
+{ columnId: 'username', searchKey: 'username', type: 'string' }
+```
+
+URL: `?username=john`
+
+### Status Filter (Array)
+
+Multi-select filter for user status:
+
+```tsx
+{
+  columnId: 'status',
+  title: 'Status',
+  options: [
+    { label: 'Active', value: 'active' },
+    { label: 'Inactive', value: 'inactive' },
+    { label: 'Invited', value: 'invited' },
+    { label: 'Suspended', value: 'suspended' },
+  ],
+}
+```
+
+URL: `?status=active&status=invited`
+
+### Role Filter (Array)
+
+Multi-select filter for user roles:
+
+```tsx
+{
+  columnId: 'role',
+  title: 'Role',
+  options: roles.map((role) => ({ ...role })),
+}
+```
+
+URL: `?role=admin&role=user`
+
+## Customization
+
+### Adding New Columns
+
+Extend the `usersColumns` array:
+
+```tsx
+{
+  accessorKey: 'department',
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title='Department' />
+  ),
+  cell: ({ row }) => <div>{row.getValue('department')}</div>,
+}
+```
+
+### Customizing Sticky Behavior
+
+Modify sticky column classes:
+
+```tsx
+meta: {
+  // Always sticky (not just on mobile)
+  className: cn('sticky start-0 z-10'),
+}
+```
+
+### Adding Custom Status Colors
+
+Define custom badge colors in `data/data.ts`:
+
+```tsx
+export const callTypes = new Map<string, string>([
+  ['active', 'border-green-600 text-green-600'],
+  ['inactive', 'border-gray-400 text-gray-400'],
+  ['invited', 'border-blue-600 text-blue-600'],
+  ['suspended', 'border-red-600 text-red-600'],
+])
+```
+
+## Components Used
+
+- `Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow` from `@/components/ui/table`
+- `Checkbox` from `@/components/ui/checkbox`
+- `Badge` from `@/components/ui/badge`
+- `DataTableToolbar`, `DataTablePagination`, `DataTableColumnHeader` from `@/components/data-table`
+- `LongText` from `@/components/long-text` for truncating long text
+- TanStack Table hooks and utilities
+
+## File Structure
+
+```
+src/features/users/
+├── index.tsx                           # Main users page
+├── components/
+│   ├── users-table.tsx                 # Table with sticky columns
+│   ├── users-columns.tsx               # Column definitions
+│   ├── data-table-row-actions.tsx      # Row actions menu
+│   ├── data-table-bulk-actions.tsx     # Bulk operations
+│   ├── users-dialogs.tsx               # CRUD dialogs
+│   ├── users-provider.tsx              # Context provider
+│   └── users-primary-buttons.tsx       # Action buttons
+├── data/
+│   ├── schema.ts                       # User data schema
+│   ├── data.tsx                        # Static data (roles, statuses)
+│   └── users.ts                        # Mock user data
+```

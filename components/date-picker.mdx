@@ -1,0 +1,345 @@
+---
+title: Date Picker
+description: Calendar-based date picker with validation and custom formatting.
+---
+
+The `DatePicker` component provides an accessible, calendar-based date selection interface. It includes date validation and customizable formatting using `date-fns`.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Calendar UI" icon="calendar">
+    Visual calendar with dropdown month/year selectors
+  </Card>
+  <Card title="Date Validation" icon="shield-check">
+    Prevents selection of invalid date ranges
+  </Card>
+  <Card title="Custom Formatting" icon="text">
+    Format display using date-fns patterns
+  </Card>
+  <Card title="Accessible" icon="universal-access">
+    Full keyboard navigation support
+  </Card>
+</CardGroup>
+
+## Usage
+
+```tsx
+import { useState } from 'react'
+import { DatePicker } from '@/components/date-picker'
+
+function MyForm() {
+  const [date, setDate] = useState<Date | undefined>()
+
+  return (
+    <DatePicker
+      selected={date}
+      onSelect={setDate}
+      placeholder="Select a date"
+    />
+  )
+}
+```
+
+## Props
+
+<ParamField path="selected" type="Date | undefined" required>
+  Currently selected date value
+</ParamField>
+
+<ParamField path="onSelect" type="(date: Date | undefined) => void" required>
+  Callback when date is selected
+</ParamField>
+
+<ParamField path="placeholder" type="string" default="Pick a date">
+  Placeholder text shown when no date is selected
+</ParamField>
+
+## Implementation
+
+```tsx src/components/date-picker.tsx
+import { format } from 'date-fns'
+import { Calendar as CalendarIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+
+type DatePickerProps = {
+  selected: Date | undefined
+  onSelect: (date: Date | undefined) => void
+  placeholder?: string
+}
+
+export function DatePicker({
+  selected,
+  onSelect,
+  placeholder = 'Pick a date',
+}: DatePickerProps) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant='outline'
+          data-empty={!selected}
+          className='w-[240px] justify-start text-start font-normal data-[empty=true]:text-muted-foreground'
+        >
+          {selected ? (
+            format(selected, 'MMM d, yyyy')
+          ) : (
+            <span>{placeholder}</span>
+          )}
+          <CalendarIcon className='ms-auto h-4 w-4 opacity-50' />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className='w-auto p-0'>
+        <Calendar
+          mode='single'
+          captionLayout='dropdown'
+          selected={selected}
+          onSelect={onSelect}
+          disabled={(date: Date) =>
+            date > new Date() || date < new Date('1900-01-01')
+          }
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+## Date Formatting
+
+The component uses `date-fns` for formatting. The default format is `'MMM d, yyyy'`:
+
+```tsx
+format(selected, 'MMM d, yyyy')
+// Output: "Jan 15, 2024"
+```
+
+### Custom Format
+
+Modify the format string to change the date display:
+
+```tsx
+import { format } from 'date-fns'
+
+// In your customized DatePicker
+{selected ? format(selected, 'yyyy-MM-dd') : placeholder}
+// Output: "2024-01-15"
+
+// Or use different patterns
+{selected ? format(selected, 'MMMM do, yyyy') : placeholder}
+// Output: "January 15th, 2024"
+
+{selected ? format(selected, 'PP') : placeholder}
+// Output: "Jan 15, 2024"
+```
+
+See [date-fns format documentation](https://date-fns.org/docs/format) for all format options.
+
+## Date Validation
+
+The default implementation restricts selectable dates:
+
+```tsx
+disabled={(date: Date) =>
+  date > new Date() || date < new Date('1900-01-01')
+}
+```
+
+**Default restrictions:**
+- Cannot select future dates (after today)
+- Cannot select dates before January 1, 1900
+
+### Custom Validation
+
+Modify the `disabled` function for custom rules:
+
+```tsx
+// Only allow weekdays
+<Calendar
+  disabled={(date) => {
+    const day = date.getDay()
+    return day === 0 || day === 6 // Disable Sunday (0) and Saturday (6)
+  }}
+/>
+
+// Only allow dates in the next 30 days
+<Calendar
+  disabled={(date) => {
+    const today = new Date()
+    const thirtyDaysFromNow = new Date()
+    thirtyDaysFromNow.setDate(today.getDate() + 30)
+    return date < today || date > thirtyDaysFromNow
+  }}
+/>
+
+// Disable specific dates
+<Calendar
+  disabled={(date) => {
+    const disabledDates = [
+      new Date('2024-01-01'),
+      new Date('2024-12-25'),
+    ]
+    return disabledDates.some(
+      (d) => d.toDateString() === date.toDateString()
+    )
+  }}
+/>
+```
+
+## Calendar Configuration
+
+The underlying `Calendar` component supports multiple configurations:
+
+### Caption Layout
+
+```tsx
+<Calendar
+  captionLayout='dropdown' // Default - month/year dropdowns
+  // OR
+  captionLayout='buttons'  // Navigation arrows only
+/>
+```
+
+### Selection Mode
+
+```tsx
+// Single date (default)
+<Calendar
+  mode='single'
+  selected={date}
+  onSelect={setDate}
+/>
+
+// Date range
+<Calendar
+  mode='range'
+  selected={dateRange}
+  onSelect={setDateRange}
+/>
+
+// Multiple dates
+<Calendar
+  mode='multiple'
+  selected={dates}
+  onSelect={setDates}
+/>
+```
+
+## Styling
+
+### Button Width
+
+The trigger button has a fixed width of `240px`:
+
+```tsx
+className='w-[240px]'
+```
+
+Customize as needed:
+
+```tsx
+<Button className='w-full'> {/* Full width */}
+<Button className='w-[300px]'> {/* Custom width */}
+```
+
+### Empty State Styling
+
+When no date is selected:
+
+```tsx
+data-empty={!selected}
+className='data-[empty=true]:text-muted-foreground'
+```
+
+This applies muted text color to the placeholder.
+
+## Accessibility
+
+- **Keyboard Navigation**: Arrow keys to navigate calendar, Enter to select
+- **Focus Management**: Proper focus handling when opening/closing
+- **ARIA Labels**: Calendar includes appropriate ARIA attributes
+- **Screen Reader Support**: Announces selected date and navigation
+
+## Examples
+
+### Form Integration
+
+```tsx
+import { useForm } from 'react-hook-form'
+import { DatePicker } from '@/components/date-picker'
+
+function EventForm() {
+  const { register, setValue, watch } = useForm()
+  const eventDate = watch('eventDate')
+
+  return (
+    <form>
+      <label>Event Date</label>
+      <DatePicker
+        selected={eventDate}
+        onSelect={(date) => setValue('eventDate', date)}
+        placeholder="When is the event?"
+      />
+    </form>
+  )
+}
+```
+
+### With Min/Max Dates
+
+```tsx
+function BookingPicker() {
+  const [date, setDate] = useState<Date>()
+  const today = new Date()
+  const maxDate = new Date()
+  maxDate.setMonth(maxDate.getMonth() + 3) // 3 months from now
+
+  return (
+    <DatePicker
+      selected={date}
+      onSelect={setDate}
+      disabled={(date) => date < today || date > maxDate}
+    />
+  )
+}
+```
+
+### Birthday Picker
+
+```tsx
+function BirthdayPicker() {
+  const [birthday, setBirthday] = useState<Date>()
+  const today = new Date()
+  const minDate = new Date()
+  minDate.setFullYear(today.getFullYear() - 120) // Max 120 years old
+
+  return (
+    <DatePicker
+      selected={birthday}
+      onSelect={setBirthday}
+      placeholder="Select your birthday"
+      disabled={(date) => date > today || date < minDate}
+    />
+  )
+}
+```
+
+## RTL Support
+
+The calendar component automatically adapts to RTL layouts:
+
+```tsx
+// Icon positioning adjusts for RTL
+className='ms-auto' // margin-inline-start (respects direction)
+```
+
+## Related Components
+
+- [UI Components](/components/ui-components) - Calendar and Popover primitives
+- [Data Table](/components/data-table) - Use DatePicker in table filters

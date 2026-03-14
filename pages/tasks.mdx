@@ -1,0 +1,395 @@
+---
+title: Tasks Page
+description: Task management with advanced data table, filtering, and CRUD operations
+icon: 'list-check'
+---
+
+The Tasks page provides a full-featured task management interface with an advanced data table, URL-synced filters, sorting, pagination, and CRUD operations.
+
+## Overview
+
+The Tasks component demonstrates a production-ready data table implementation using TanStack Table with provider pattern for state management.
+
+**Location:** `src/features/tasks/index.tsx`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Advanced Data Table" icon="table">
+    TanStack Table with sorting, filtering, and pagination
+  </Card>
+  <Card title="URL State Sync" icon="link">
+    Filters and pagination synced with URL parameters
+  </Card>
+  <Card title="Bulk Actions" icon="square-check">
+    Multi-select rows with bulk delete operations
+  </Card>
+  <Card title="CRUD Operations" icon="pencil">
+    Create, read, update, and delete tasks via drawer
+  </Card>
+</CardGroup>
+
+## Component Structure
+
+```tsx src/features/tasks/index.tsx
+export function Tasks() {
+  return (
+    <TasksProvider>
+      <Header fixed>
+        <Search />
+        <div className='ms-auto flex items-center space-x-4'>
+          <ThemeSwitch />
+          <ConfigDrawer />
+          <ProfileDropdown />
+        </div>
+      </Header>
+
+      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+        <div className='flex flex-wrap items-end justify-between gap-2'>
+          <div>
+            <h2 className='text-2xl font-bold tracking-tight'>Tasks</h2>
+            <p className='text-muted-foreground'>
+              Here&apos;s a list of your tasks for this month!
+            </p>
+          </div>
+          <TasksPrimaryButtons />
+        </div>
+        <TasksTable data={tasks} />
+      </Main>
+
+      <TasksDialogs />
+    </TasksProvider>
+  )
+}
+```
+
+## Data Schema
+
+Tasks use a Zod schema for validation:
+
+```tsx src/features/tasks/data/schema.ts
+import { z } from 'zod'
+
+export const taskSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: z.string(),
+  label: z.string(),
+  priority: z.string(),
+})
+
+export type Task = z.infer<typeof taskSchema>
+```
+
+## Table Implementation
+
+The TasksTable component uses TanStack Table with URL state synchronization:
+
+```tsx src/features/tasks/components/tasks-table.tsx
+export function TasksTable({ data }: DataTableProps) {
+  const [rowSelection, setRowSelection] = useState({})
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+
+  // Synced with URL states
+  const {
+    globalFilter,
+    onGlobalFilterChange,
+    columnFilters,
+    onColumnFiltersChange,
+    pagination,
+    onPaginationChange,
+    ensurePageInRange,
+  } = useTableUrlState({
+    search: route.useSearch(),
+    navigate: route.useNavigate(),
+    pagination: { defaultPage: 1, defaultPageSize: 10 },
+    globalFilter: { enabled: true, key: 'filter' },
+    columnFilters: [
+      { columnId: 'status', searchKey: 'status', type: 'array' },
+      { columnId: 'priority', searchKey: 'priority', type: 'array' },
+    ],
+  })
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+      rowSelection,
+      columnFilters,
+      globalFilter,
+      pagination,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  })
+
+  return (
+    <div className='flex flex-1 flex-col gap-4'>
+      <DataTableToolbar table={table} />
+      {/* Table rendering */}
+      <DataTablePagination table={table} />
+      <DataTableBulkActions table={table} />
+    </div>
+  )
+}
+```
+
+## Column Definitions
+
+Columns are defined with custom renderers and metadata:
+
+```tsx src/features/tasks/components/tasks-columns.tsx
+export const tasksColumns: ColumnDef<Task>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: 'id',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Task' />
+    ),
+    cell: ({ row }) => <div className='w-[80px]'>{row.getValue('id')}</div>,
+  },
+  {
+    accessorKey: 'title',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Title' />
+    ),
+    meta: {
+      className: 'ps-1 max-w-0 w-2/3',
+      tdClassName: 'ps-4',
+    },
+    cell: ({ row }) => {
+      const label = labels.find((label) => label.value === row.original.label)
+      return (
+        <div className='flex space-x-2'>
+          {label && <Badge variant='outline'>{label.label}</Badge>}
+          <span className='truncate font-medium'>{row.getValue('title')}</span>
+        </div>
+      )
+    },
+  },
+  {
+    accessorKey: 'status',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Status' />
+    ),
+    cell: ({ row }) => {
+      const status = statuses.find(
+        (status) => status.value === row.getValue('status')
+      )
+      return (
+        <div className='flex w-[100px] items-center gap-2'>
+          {status.icon && <status.icon className='size-4 text-muted-foreground' />}
+          <span>{status.label}</span>
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+  },
+  {
+    accessorKey: 'priority',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Priority' />
+    ),
+    cell: ({ row }) => {
+      const priority = priorities.find(
+        (priority) => priority.value === row.getValue('priority')
+      )
+      return (
+        <div className='flex items-center gap-2'>
+          {priority.icon && <priority.icon className='size-4' />}
+          <span>{priority.label}</span>
+        </div>
+      )
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+  },
+  {
+    id: 'actions',
+    cell: ({ row }) => <DataTableRowActions row={row} />,
+  },
+]
+```
+
+## Row Actions
+
+Each row has a dropdown menu with actions:
+
+```tsx src/features/tasks/components/data-table-row-actions.tsx
+export function DataTableRowActions({ row }: DataTableRowActionsProps) {
+  const task = taskSchema.parse(row.original)
+  const { setOpen, setCurrentRow } = useTasks()
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant='ghost' className='h-8 w-8 p-0'>
+          <DotsHorizontalIcon className='h-4 w-4' />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='end'>
+        <DropdownMenuItem
+          onClick={() => {
+            setCurrentRow(task)
+            setOpen('update')
+          }}
+        >
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup value={task.label}>
+              {labels.map((label) => (
+                <DropdownMenuRadioItem key={label.value} value={label.value}>
+                  {label.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            setCurrentRow(task)
+            setOpen('delete')
+          }}
+        >
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+```
+
+## Filtering and Toolbar
+
+The DataTableToolbar provides search and faceted filters:
+
+```tsx
+<DataTableToolbar
+  table={table}
+  searchPlaceholder='Filter by title or ID...'
+  filters={[
+    {
+      columnId: 'status',
+      title: 'Status',
+      options: statuses,
+    },
+    {
+      columnId: 'priority',
+      title: 'Priority',
+      options: priorities,
+    },
+  ]}
+/>
+```
+
+## URL State Synchronization
+
+Filters, pagination, and search are synced with URL parameters using `useTableUrlState`:
+
+- **Global filter**: `?filter=search+term`
+- **Column filters**: `?status=todo&status=in-progress&priority=high`
+- **Pagination**: `?page=2&pageSize=25`
+
+This allows users to bookmark, share, and refresh pages while maintaining state.
+
+## Customization
+
+### Adding Custom Columns
+
+Add new columns to the `tasksColumns` array:
+
+```tsx
+{
+  accessorKey: 'dueDate',
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title='Due Date' />
+  ),
+  cell: ({ row }) => {
+    return <div>{format(row.getValue('dueDate'), 'PPP')}</div>
+  },
+}
+```
+
+### Custom Filter Functions
+
+Implement custom filter logic:
+
+```tsx
+{
+  accessorKey: 'title',
+  filterFn: (row, id, filterValue) => {
+    return row.getValue(id).toLowerCase().includes(filterValue.toLowerCase())
+  },
+}
+```
+
+### Modifying Table State
+
+Change default pagination or sorting:
+
+```tsx
+const {
+  pagination,
+  onPaginationChange,
+} = useTableUrlState({
+  pagination: { defaultPage: 1, defaultPageSize: 25 }, // Changed from 10
+})
+```
+
+## Components Used
+
+- `Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow` from `@/components/ui/table`
+- `Checkbox` from `@/components/ui/checkbox`
+- `Badge` from `@/components/ui/badge`
+- `DropdownMenu` components from `@/components/ui/dropdown-menu`
+- `DataTableToolbar`, `DataTablePagination`, `DataTableColumnHeader` from `@/components/data-table`
+- TanStack Table hooks: `useReactTable`, `flexRender`, `getCoreRowModel`, etc.
+
+## File Structure
+
+```
+src/features/tasks/
+├── index.tsx                           # Main tasks page
+├── components/
+│   ├── tasks-table.tsx                 # Table component with TanStack Table
+│   ├── tasks-columns.tsx               # Column definitions
+│   ├── data-table-row-actions.tsx      # Row action menu
+│   ├── data-table-bulk-actions.tsx     # Bulk selection actions
+│   ├── tasks-dialogs.tsx               # Create/Edit/Delete dialogs
+│   ├── tasks-mutate-drawer.tsx         # Drawer for create/edit
+│   ├── tasks-provider.tsx              # Context provider for state
+│   └── tasks-primary-buttons.tsx       # Action buttons
+├── data/
+│   ├── schema.ts                       # Zod schema for tasks
+│   ├── data.tsx                        # Static data (statuses, priorities)
+│   └── tasks.ts                        # Mock task data
+```

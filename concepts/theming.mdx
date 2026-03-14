@@ -1,0 +1,507 @@
+---
+title: Theming
+description: Customizing colors, fonts, and the theme system with CSS variables
+icon: palette
+---
+
+Shadcn Admin uses a powerful theming system built on CSS variables and Tailwind CSS, enabling easy customization of colors, typography, and light/dark modes.
+
+## Theme System Overview
+
+<CardGroup cols={2}>
+  <Card title="CSS Variables" icon="code">
+    Theme colors defined as CSS custom properties for maximum flexibility
+  </Card>
+  
+  <Card title="OKLCH Colors" icon="droplet">
+    Modern OKLCH color space for perceptually uniform colors
+  </Card>
+  
+  <Card title="Light/Dark Mode" icon="sun-moon">
+    Built-in theme switching with system preference detection
+  </Card>
+  
+  <Card title="Tailwind Integration" icon="wind">
+    Seamless integration with Tailwind CSS utilities
+  </Card>
+</CardGroup>
+
+## Theme Provider
+
+The application wraps all components with `ThemeProvider` for theme management:
+
+```tsx src/main.tsx
+import { ThemeProvider } from './context/theme-provider'
+import { FontProvider } from './context/font-provider'
+
+root.render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <FontProvider>
+          <DirectionProvider>
+            <RouterProvider router={router} />
+          </DirectionProvider>
+        </FontProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </StrictMode>
+)
+```
+
+### Theme Context
+
+The `ThemeProvider` manages theme state with cookie persistence:
+
+```tsx src/context/theme-provider.tsx
+import { createContext, useContext, useEffect, useState, useMemo } from 'react'
+import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+
+type Theme = 'dark' | 'light' | 'system'
+type ResolvedTheme = Exclude<Theme, 'system'>
+
+const DEFAULT_THEME = 'system'
+const THEME_COOKIE_NAME = 'vite-ui-theme'
+const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [theme, _setTheme] = useState<Theme>(
+    () => (getCookie(THEME_COOKIE_NAME) as Theme) || DEFAULT_THEME
+  )
+
+  // Calculate resolved theme (system → dark/light)
+  const resolvedTheme = useMemo((): ResolvedTheme => {
+    if (theme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    }
+    return theme as ResolvedTheme
+  }, [theme])
+
+  const setTheme = (theme: Theme) => {
+    setCookie(THEME_COOKIE_NAME, theme, THEME_COOKIE_MAX_AGE)
+    _setTheme(theme)
+  }
+
+  // Apply theme to document root
+  useEffect(() => {
+    const root = window.document.documentElement
+    root.classList.remove('light', 'dark')
+    root.classList.add(resolvedTheme)
+  }, [theme, resolvedTheme])
+
+  return (
+    <ThemeContext value={{ theme, resolvedTheme, setTheme }}>
+      {children}
+    </ThemeContext>
+  )
+}
+```
+
+<Note>
+The theme preference is stored in a cookie for persistence across sessions.
+</Note>
+
+### Using the Theme Hook
+
+```tsx Using useTheme
+import { useTheme } from '@/context/theme-provider'
+
+function ThemeSwitcher() {
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+      <p>Resolved theme: {resolvedTheme}</p>
+      
+      <button onClick={() => setTheme('light')}>Light</button>
+      <button onClick={() => setTheme('dark')}>Dark</button>
+      <button onClick={() => setTheme('system')}>System</button>
+    </div>
+  )
+}
+```
+
+## Color System
+
+Theme colors are defined in `src/styles/theme.css` using CSS variables:
+
+```css src/styles/theme.css
+:root {
+  --radius: 0.625rem;
+  
+  /* Core colors */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
+  
+  /* UI elements */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  
+  /* Interactive elements */
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  
+  /* States */
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  
+  /* Borders and inputs */
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+  
+  /* Chart colors */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  
+  /* Sidebar colors */
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+```
+
+### Dark Mode Colors
+
+```css Dark Theme Override
+.dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  
+  --card: oklch(0.14 0.04 259.21);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  
+  /* ... additional dark mode overrides */
+}
+```
+
+<Accordion title="Why OKLCH?">
+OKLCH (Oklab Lightness Chroma Hue) is a modern color space that provides:
+
+- **Perceptual Uniformity**: Colors that look equally bright actually are
+- **Better Interpolation**: Smooth gradients and transitions
+- **Wider Gamut**: Access to more vibrant colors
+- **Predictable Adjustments**: Changing lightness/chroma works as expected
+
+Learn more: [OKLCH Color Picker](https://oklch.com/)
+</Accordion>
+
+## Using Theme Colors
+
+### Tailwind Utilities
+
+All theme colors are available as Tailwind utilities:
+
+```tsx Using Theme Colors
+function MyComponent() {
+  return (
+    <div className="bg-background text-foreground">
+      <div className="bg-card text-card-foreground rounded-lg border border-border">
+        <button className="bg-primary text-primary-foreground hover:bg-primary/90">
+          Primary Button
+        </button>
+        
+        <button className="bg-secondary text-secondary-foreground">
+          Secondary Button
+        </button>
+        
+        <button className="bg-destructive text-white">
+          Delete
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+### Available Color Tokens
+
+<CodeGroup>
+```tsx Background Colors
+bg-background       // Main background
+bg-foreground       // Main text color
+bg-card             // Card backgrounds
+bg-popover          // Popup/dropdown backgrounds
+bg-muted            // Muted backgrounds
+bg-accent           // Accent backgrounds
+```
+
+```tsx Text Colors
+text-foreground
+text-card-foreground
+text-popover-foreground
+text-primary-foreground
+text-secondary-foreground
+text-muted-foreground
+text-accent-foreground
+```
+
+```tsx Border Colors
+border-border       // Default borders
+border-input        // Input borders
+ring-ring           // Focus rings
+```
+
+```tsx Semantic Colors
+bg-primary          // Primary actions
+bg-secondary        // Secondary actions
+bg-destructive      // Destructive actions
+```
+</CodeGroup>
+
+## Customizing Colors
+
+To customize your theme colors:
+
+<Steps>
+  <Step title="Choose Your Colors">
+    Use the [OKLCH Color Picker](https://oklch.com/) to select colors:
+    - Adjust Lightness (0-1)
+    - Adjust Chroma (saturation, 0-0.4)
+    - Adjust Hue (0-360 degrees)
+  </Step>
+  
+  <Step title="Update theme.css">
+    Replace the color values in `src/styles/theme.css`:
+    ```css
+    :root {
+      --primary: oklch(0.5 0.2 250);  /* Your custom primary */
+    }
+    ```
+  </Step>
+  
+  <Step title="Update Dark Mode">
+    Adjust dark mode colors for proper contrast:
+    ```css
+    .dark {
+      --primary: oklch(0.7 0.2 250);  /* Lighter for dark mode */
+    }
+    ```
+  </Step>
+  
+  <Step title="Test Accessibility">
+    Ensure sufficient contrast ratios (4.5:1 for text, 3:1 for UI).
+  </Step>
+</Steps>
+
+<Warning>
+Always test color changes in both light and dark modes to ensure readability.
+</Warning>
+
+## Typography System
+
+The theme supports custom font configuration:
+
+### Font Provider
+
+```tsx src/context/font-provider.tsx
+import { createContext, useContext, useState } from 'react'
+import { getCookie, setCookie } from '@/lib/cookies'
+
+type Font = 'inter' | 'manrope'
+
+const DEFAULT_FONT = 'inter'
+const FONT_COOKIE_NAME = 'font-family'
+
+export function FontProvider({ children }: { children: React.ReactNode }) {
+  const [font, _setFont] = useState<Font>(
+    () => (getCookie(FONT_COOKIE_NAME) as Font) || DEFAULT_FONT
+  )
+
+  const setFont = (font: Font) => {
+    setCookie(FONT_COOKIE_NAME, font, 60 * 60 * 24 * 365)
+    _setFont(font)
+    document.body.classList.remove('font-inter', 'font-manrope')
+    document.body.classList.add(`font-${font}`)
+  }
+
+  return (
+    <FontContext value={{ font, setFont }}>
+      {children}
+    </FontContext>
+  )
+}
+```
+
+### Font Configuration
+
+Fonts are defined in `theme.css`:
+
+```css Font Variables
+@theme inline {
+  --font-inter: 'Inter', 'sans-serif';
+  --font-manrope: 'Manrope', 'sans-serif';
+}
+```
+
+### Switching Fonts
+
+```tsx Font Switcher Example
+import { useFont } from '@/context/font-provider'
+
+function FontSwitcher() {
+  const { font, setFont } = useFont()
+  
+  return (
+    <select value={font} onChange={(e) => setFont(e.target.value)}>
+      <option value="inter">Inter</option>
+      <option value="manrope">Manrope</option>
+    </select>
+  )
+}
+```
+
+## Border Radius
+
+Global border radius is controlled by the `--radius` variable:
+
+```css src/styles/theme.css
+:root {
+  --radius: 0.625rem;  /* 10px base radius */
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);  /* 6px */
+  --radius-md: calc(var(--radius) - 2px);  /* 8px */
+  --radius-lg: var(--radius);              /* 10px */
+  --radius-xl: calc(var(--radius) + 4px);  /* 14px */
+}
+```
+
+### Using Radius Utilities
+
+```tsx Border Radius Examples
+<div className="rounded-sm">  {/* Uses --radius-sm */}
+<div className="rounded-md">  {/* Uses --radius-md */}
+<div className="rounded-lg">  {/* Uses --radius-lg */}
+<div className="rounded-xl">  {/* Uses --radius-xl */}
+```
+
+## Tailwind Configuration
+
+Tailwind CSS integrates with the theme system via `src/styles/index.css`:
+
+```css src/styles/index.css
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './theme.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    @apply min-h-svh w-full bg-background text-foreground;
+  }
+}
+```
+
+## Theme Color Mapping
+
+Colors are mapped to Tailwind utilities in `theme.css`:
+
+```css Color Mapping for Tailwind
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  /* ... more mappings */
+}
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Semantic Color Names">
+    Always use semantic tokens like `bg-primary` instead of specific colors:
+    ```tsx
+    ✓ className="bg-primary"        // Adapts to theme
+    ✗ className="bg-blue-500"      // Fixed color
+    ```
+  </Step>
+  
+  <Step title="Test Both Themes">
+    Always verify components work in both light and dark modes.
+  </Step>
+  
+  <Step title="Maintain Contrast">
+    Ensure text meets WCAG accessibility standards (4.5:1 ratio).
+  </Step>
+  
+  <Step title="Use CSS Variables for Custom Colors">
+    When adding new colors, define them as CSS variables first.
+  </Step>
+</Steps>
+
+<Tip>
+Use browser DevTools to inspect computed CSS variables and debug theme issues.
+</Tip>
+
+## Example: Custom Theme
+
+Here's how to create a custom purple theme:
+
+```css Custom Purple Theme
+:root {
+  /* Purple primary color */
+  --primary: oklch(0.55 0.25 300);  /* Purple */
+  --primary-foreground: oklch(1 0 0);  /* White text */
+  
+  /* Adjusted accent */
+  --accent: oklch(0.95 0.05 300);  /* Light purple */
+  --accent-foreground: oklch(0.3 0.15 300);  /* Dark purple */
+}
+
+.dark {
+  /* Brighter purple for dark mode */
+  --primary: oklch(0.7 0.25 300);
+  --primary-foreground: oklch(0.15 0.05 300);
+  
+  --accent: oklch(0.25 0.1 300);
+  --accent-foreground: oklch(0.9 0.15 300);
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="RTL Support" icon="text-direction-ltr" href="/concepts/rtl-support">
+    Learn about right-to-left language support
+  </Card>
+  
+  <Card title="OKLCH Color Picker" icon="palette" href="https://oklch.com">
+    Design your custom color palette
+  </Card>
+</CardGroup>
